@@ -15,6 +15,14 @@ void cpu_reset(cpu_t *c) {
     c->halted = c->interrupted = false;
 }
 
+void cpu_dump(cpu_t *c, FILE *fp) {
+    fprintf(fp, "A:  %02x    FL: %02x\n", c->A, c->FL);
+    fprintf(fp, "B:  %02x    C:  %02x\n", c->B, c->C);
+    fprintf(fp, "D:  %02x    E:  %02x\n", c->D, c->E);
+    fprintf(fp, "H:  %02x    L:  %02x\n", c->H, c->L);
+    fprintf(fp, "PC: %04x\n", c->PC);
+    fprintf(fp, "SP: %04x\n", c->SP);
+}
 
 #define TICK do {           \
     printf("tick\n");       \
@@ -336,7 +344,3 @@ void cpu_step(cpu_t *c) {
     }
 
 }
-
-
-
-

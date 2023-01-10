@@ -49,6 +49,9 @@ typedef struct cpu_t {
 
 } cpu_t;
 
+/* Display registers */
+void cpu_dump(cpu_t *c, FILE *fp);
+
 /* One instruction */
 void cpu_step(cpu_t*);
 

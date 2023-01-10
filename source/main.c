@@ -23,6 +23,7 @@ static const char HELP[] =
     "    run            : run until sigint (Ctrl+C) is received\n"
     "    reset          : reset CPU\n"
     "    reboot         : reset CPU and RAM (power off then on)\n"
+    "    reg            : display registers\n"
 ;
 
 static void print(void) {
@@ -167,6 +168,11 @@ int main(void) {
         /* Hard reset */
         else if (strcmp("reboot", tok) == 0) {
             mac_init(&mac);
+        }
+
+        /* Display registers */
+        else if (strcmp("reg", tok) == 0) {
+            cpu_dump(&mac.cpu, stdout);
         }
 
         /* Error */
