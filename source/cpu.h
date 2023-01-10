@@ -5,12 +5,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define RAM_SIZE 0x10000
+
 typedef uint16_t addr_t;
 typedef uint8_t  data_t;
 
+/* State of a 8080 CPU */
 typedef struct cpu_t {
 
-    /* Accumulator and flags */
+    /* Acc and flags */
     union {
         uint16_t PSW;
         struct { uint8_t A, FL; };
@@ -34,26 +37,22 @@ typedef struct cpu_t {
         uint16_t HL;
     };
 
-    /* PC and SP */
+    /* Program counter and stack pointer */
     uint16_t PC, SP;
 
-    /* Other Internal registers */
-    //
+    bool halted, interrupted;
 
-    /* Chip interface */
-    // bool interrupted, halted;
-    void   (*on_write) (struct cpu_t *self, addr_t, data_t);
-    data_t (*on_read)  (struct cpu_t *self, addr_t);
+    /* Memory */
+    data_t *ram;
+    addr_t *addr_bus;
+    data_t *data_bus;
 
 } cpu_t;
-
-/* One clock cycle */
-void cpu_clock(cpu_t*);
 
 /* One instruction */
 void cpu_step(cpu_t*);
 
-/* Reset registers to 0 */
+/* Reset registers */
 void cpu_reset(cpu_t*);
 
 #endif

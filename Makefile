@@ -9,6 +9,9 @@ all : $(MODULES)
 # Sub sustems deps
 main : machine
 
+run : source
+	rlwrap bin/source/main
+
 # Gen modules
 $(MODULES) :
 	@echo
