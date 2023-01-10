@@ -1,40 +1,23 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -ggdb
+include config.mk
 
-SRC_DIR = source
-EXE_DIR = main
-BIN_DIR = bin
+# Sub systems
+MODULES = source
 
-SRC = $(widlcard $(SRC_DIR)/*.c)
-OBJ = $(patsubst %.c,$(BIN_DIR)/%.o,$(SRC))
+.PHONY: all clean $(MODULES) runtest $(TESTS)
+all : $(MODULES)
 
-EXE_SRC = $(wildcard $(EXE_DIR)/*.c)
-EXE_OBJ = $(patsubst %.c,$(BIN_DIR)/%.o,$(EXE_SRC))
-EXE     = $(patsubst $(EXE_DIR)/%.c,$(BIN_DIR)/%,$(EXE_SRC))
-EXE_RUN = $(patsubst $(EXE_DIR)/%.c,run_%,$(EXE_SRC))
+# Sub sustems deps
+main : machine
 
-all: $(EXE)
+# Gen modules
+$(MODULES) :
+	@echo
+	@echo ==== MAKING $@ ====
+	@$(MAKE) -C $@ \
+		CURMODULE=$@ \
+		--no-print-directory \
+		-E 'include $(PWD)/config.mk'
 
-show:
-	@echo SRC_DIR=$(SRC_DIR)
-	@echo EXE_DIR=$(EXE_DIR)
-	@echo BIN_DIR=$(BIN_DIR)
-	@echo SRC=$(SRC)
-	@echo OBJ=$(OBJ)
-	@echo EXE_SRC=$(EXE_SRC)
-	@echo EXE_OBJ=$(EXE_OBJ)
-	@echo EXE=$(EXE)
-
-$(EXE_RUN) : run_% : $(BIN_DIR)/%
-	@$<
-
-$(EXE) : $(BIN_DIR)/% : $(BIN_DIR)/$(EXE_DIR)/%.o $(OBJ)
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $@ $^
-
-$(OBJ) $(EXE_OBJ) : $(BIN_DIR)/%.o : %.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-clean:
-	rm -rf $(BIN_DIR)
+# Cleaning
+clean :
+	rm -rf $(BIN)
