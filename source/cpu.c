@@ -51,20 +51,17 @@ static addr_t fetch_addr(cpu_t *c) {
 
 #define MOV_RR(D, S) do {               \
     c->D = c->S;                        \
-    printf("MOV " #D ", " #S "\n");     \
 } while(0)
 
 #define MOV_MR(S) do {                  \
     addr_t addr = fetch_addr(c);        \
     store(c, addr, c->S);               \
-    printf("MOV $%04x, " #S "\n", addr);\
 } while(0)
 
 #define MOV_RM(D) do {                  \
     addr_t addr = fetch_addr(c);        \
     data_t data = load(c, addr);        \
     c->D = data;                        \
-    printf("MOV " #D ", $%04x\n", addr);\
 } while(0)
 
 void cpu_step(cpu_t *c) {
