@@ -123,6 +123,15 @@ static addr_t fetch_addr(cpu_t *c) {
 #define SPHL() \
     c->SP = HL;
 
+#define XTHL() do {                 \
+    data_t hi = c->H;               \
+    data_t lo = c->L;               \
+    c->L = load(c, c->SP++);        \
+    c->H = load(c, c->SP++);        \
+    store(c, --c->SP, hi);          \
+    store(c, --c->SP, lo);          \
+} while (0);
+
 #define PUSH(HI, LO) do {           \
     store(c, --c->SP, c->HI);       \
     store(c, --c->SP, c->LO);       \
@@ -378,7 +387,7 @@ void cpu_step(cpu_t *c) {
         case 0xe0: NIMPL; break; /* */
         case 0xe1: POP(H, L); break; /* POP H */
         case 0xe2: NIMPL; break; /* */
-        case 0xe3: NIMPL; break; /* */
+        case 0xe3: XTHL(); break; /* XTHL */
         case 0xe4: NIMPL; break; /* */
         case 0xe5: PUSH(H, L); break; /* PUSH H */
         case 0xe6: NIMPL; break; /* */

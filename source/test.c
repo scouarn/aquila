@@ -279,7 +279,6 @@ int main(void) {
 
     TEST_END;
 
-
     TEST_BEGIN("SPHL");
         LOAD(
             0xf9 // SPHL
@@ -321,14 +320,45 @@ int main(void) {
         ram[0x1239] = 0x3d;
         ram[0x123A] = 0x93;
         cpu.SP = 0x1239;
+
         cpu_step(&cpu);
-        if (cpu.L != 0x3D) {
-            TEST_FAIL("L=$%02x", cpu.L);
-        }
         if (cpu.H != 0x93) {
             TEST_FAIL("H=$%02x", cpu.H);
         }
+        if (cpu.L != 0x3D) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
         if (cpu.SP != 0x123b) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("XTHL");
+        LOAD(
+            0xe3, // XTHL
+        );
+
+        cpu.SP = 0x10ad;
+        cpu.H = 0x0b;
+        cpu.L = 0x3c;
+        ram[0x10ad] = 0xf0;
+        ram[0x10ae] = 0x0d;
+
+        cpu_step(&cpu);
+        if (cpu.H != 0x0d) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xf0) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (ram[0x10ae] != 0x0b) {
+            TEST_FAIL("M=$%02x", ram[0x10ae]);
+        }
+        if (ram[0x10ad] != 0x3c) {
+            TEST_FAIL("M'=$%02x", ram[0x10ad]);
+        }
+        if (cpu.SP != 0x10ad) {
             TEST_FAIL("SP=$%04x", cpu.SP);
         }
 
