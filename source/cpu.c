@@ -96,6 +96,14 @@ static addr_t fetch_addr(cpu_t *c) {
     c->H = load(c, addr+1);         \
 } while(0);
 
+#define MVI(DST) \
+    c->DST = fetch(c);
+
+#define MVI_M() do {                \
+    data_t data = fetch(c);         \
+    store(c, HL, data);             \
+} while(0);
+
 void cpu_step(cpu_t *c) {
 
     /* Check if halted */
@@ -114,7 +122,7 @@ void cpu_step(cpu_t *c) {
         case 0x03: NIMPL; break; /* */
         case 0x04: NIMPL; break; /* */
         case 0x05: NIMPL; break; /* */
-        case 0x06: NIMPL; break; /* */
+        case 0x06: MVI(B); break; /* MVI B, data */
         case 0x07: NIMPL; break; /* */
         case 0x08: NOP(); break; /* NOP */
         case 0x09: NIMPL; break; /* */
@@ -122,7 +130,7 @@ void cpu_step(cpu_t *c) {
         case 0x0b: NIMPL; break; /* */
         case 0x0c: NIMPL; break; /* */
         case 0x0d: NIMPL; break; /* */
-        case 0x0e: NIMPL; break; /* */
+        case 0x0e: MVI(C); break; /* MVI C, data */
         case 0x0f: NIMPL; break; /* */
         case 0x10: NOP(); break; /* NOP */
         case 0x11: NIMPL; break; /* */
@@ -130,7 +138,7 @@ void cpu_step(cpu_t *c) {
         case 0x13: NIMPL; break; /* */
         case 0x14: NIMPL; break; /* */
         case 0x15: NIMPL; break; /* */
-        case 0x16: NIMPL; break; /* */
+        case 0x16: MVI(D); break; /* MVI D, data */
         case 0x17: NIMPL; break; /* */
         case 0x18: NOP(); break; /* NOP */
         case 0x19: NIMPL; break; /* */
@@ -138,7 +146,7 @@ void cpu_step(cpu_t *c) {
         case 0x1b: NIMPL; break; /* */
         case 0x1c: NIMPL; break; /* */
         case 0x1d: NIMPL; break; /* */
-        case 0x1e: NIMPL; break; /* */
+        case 0x1e: MVI(E); break; /* MVI E, data */
         case 0x1f: NIMPL; break; /* */
         case 0x20: NOP(); break; /* NOP */
         case 0x21: NIMPL; break; /* */
@@ -146,7 +154,7 @@ void cpu_step(cpu_t *c) {
         case 0x23: NIMPL; break; /* */
         case 0x24: NIMPL; break; /* */
         case 0x25: NIMPL; break; /* */
-        case 0x26: NIMPL; break; /* */
+        case 0x26: MVI(H); break; /* MVI H, data */
         case 0x27: NIMPL; break; /* */
         case 0x28: NOP(); break; /* NOP */
         case 0x29: NIMPL; break; /* */
@@ -154,7 +162,7 @@ void cpu_step(cpu_t *c) {
         case 0x2b: NIMPL; break; /* */
         case 0x2c: NIMPL; break; /* */
         case 0x2d: NIMPL; break; /* */
-        case 0x2e: NIMPL; break; /* */
+        case 0x2e: MVI(L); break; /* MVI L, data */
         case 0x2f: NIMPL; break; /* */
         case 0x30: NOP(); break; /* NOP */
         case 0x31: NIMPL; break; /* */
@@ -162,7 +170,7 @@ void cpu_step(cpu_t *c) {
         case 0x33: NIMPL; break; /* */
         case 0x34: NIMPL; break; /* */
         case 0x35: NIMPL; break; /* */
-        case 0x36: NIMPL; break; /* */
+        case 0x36: MVI_M(); break; /* MVI M, data */
         case 0x37: NIMPL; break; /* */
         case 0x38: NIMPL; break; /* */
         case 0x39: NIMPL; break; /* */
@@ -170,7 +178,7 @@ void cpu_step(cpu_t *c) {
         case 0x3b: NIMPL; break; /* */
         case 0x3c: NIMPL; break; /* */
         case 0x3d: NIMPL; break; /* */
-        case 0x3e: NIMPL; break; /* */
+        case 0x3e: MVI(A); break; /* MVI A, data */
         case 0x3f: NIMPL; break; /* */
         case 0x40: MOV_RR(B, B); break; /* MOV B, B */
         case 0x41: MOV_RR(B, C); break; /* MOV B, C */

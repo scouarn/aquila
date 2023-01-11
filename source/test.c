@@ -162,4 +162,59 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("MVI");
+        LOAD(
+            0x06, 0xbb, // MVI B, $bb
+            0x0e, 0xcc, // MVI C, $cc
+            0x16, 0xdd, // MVI D, $dd
+            0x1e, 0xee, // MVI E, $ee
+            0x26, 0xff, // MVI H, $ff
+            0x2e, 0x11, // MVI L, $11
+            0x36, 0x99, // MVI M, $99
+            0x3e, 0xaa, // MVI A, $aa
+        );
+
+        cpu_step(&cpu);
+        if (cpu.B != 0xbb) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.C != 0xcc) {
+            TEST_FAIL("C=$%02x", cpu.C);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.D != 0xdd) {
+            TEST_FAIL("B=$%02x", cpu.D);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.E != 0xee) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.H != 0xff) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.L != 0x11) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+        cpu.H = 0x40; cpu.L = 0x00;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0x99) {
+            TEST_FAIL("M=$%02x", ram[0x4000]);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.A != 0xaa) {
+            TEST_FAIL("A=$%02x", cpu.A);
+        }
+
+    TEST_END;
+
 }
