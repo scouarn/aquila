@@ -84,6 +84,17 @@ static addr_t fetch_addr(cpu_t *c) {
 #define LDA() \
     c->A = load(c, fetch_addr(c));
 
+#define SHLD() do {                 \
+    addr_t addr = fetch_addr(c);    \
+    store(c, addr,   c->L);         \
+    store(c, addr+1, c->H);         \
+} while(0);
+
+#define LHLD() do {                 \
+    addr_t addr = fetch_addr(c);    \
+    c->L = load(c, addr);           \
+    c->H = load(c, addr+1);         \
+} while(0);
 
 void cpu_step(cpu_t *c) {
 
@@ -131,7 +142,7 @@ void cpu_step(cpu_t *c) {
         case 0x1f: NIMPL; break; /* */
         case 0x20: NOP(); break; /* NOP */
         case 0x21: NIMPL; break; /* */
-        case 0x22: NIMPL; break; /* */
+        case 0x22: SHLD(); break; /* SHLD addr */
         case 0x23: NIMPL; break; /* */
         case 0x24: NIMPL; break; /* */
         case 0x25: NIMPL; break; /* */
@@ -139,7 +150,7 @@ void cpu_step(cpu_t *c) {
         case 0x27: NIMPL; break; /* */
         case 0x28: NOP(); break; /* NOP */
         case 0x29: NIMPL; break; /* */
-        case 0x2a: NIMPL; break; /* */
+        case 0x2a: LHLD(); break; /* LHLD addr */
         case 0x2b: NIMPL; break; /* */
         case 0x2c: NIMPL; break; /* */
         case 0x2d: NIMPL; break; /* */

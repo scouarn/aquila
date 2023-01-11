@@ -71,14 +71,14 @@ int main(void) {
         cpu.B = 0x40; cpu.C = 0x00;
         cpu_step(&cpu);
         if (ram[0x4000] != 0xaa) {
-            TEST_FAIL("STAX B : M=$%02x", ram[0x4000]);
+            TEST_FAIL("B : M=$%02x", ram[0x4000]);
         }
 
         cpu.A = 0xbb;
         cpu.D = 0x50; cpu.E = 0x00;
         cpu_step(&cpu);
         if (ram[0x5000] != 0xbb) {
-            TEST_FAIL("STAX D : M=$%02x", ram[0x5000]);
+            TEST_FAIL("D : M=$%02x", ram[0x5000]);
         }
 
     TEST_END;
@@ -91,7 +91,7 @@ int main(void) {
         cpu.A = 0xaa;
         cpu_step(&cpu);
         if (ram[0x4000] != 0xaa) {
-            TEST_FAIL("STA : M=$%02x", ram[0x4000]);
+            TEST_FAIL("M=$%02x", ram[0x4000]);
         }
     TEST_END;
 
@@ -105,27 +105,61 @@ int main(void) {
         cpu.B = 0x40; cpu.C = 0x00;
         cpu_step(&cpu);
         if (cpu.A != 0xaa) {
-            TEST_FAIL("LDAX B : A=$%02x", cpu.A);
+            TEST_FAIL("B : A=$%02x", cpu.A);
         }
 
         ram[0x5000] = 0xbb;
         cpu.D = 0x50; cpu.E = 0x00;
         cpu_step(&cpu);
         if (cpu.A != 0xbb) {
-            TEST_FAIL("LDAX D : A=$%02x", cpu.A);
+            TEST_FAIL("D : A=$%02x", cpu.A);
         }
 
     TEST_END;
 
     TEST_BEGIN("LDA");
         LOAD(
-            0x3A, 0x00, 0x40, // LDA $4000
+            0x3a, 0x00, 0x40, // LDA $4000
         );
 
         ram[0x4000] = 0xaa;
         cpu_step(&cpu);
         if (cpu.A != 0xaa) {
-            TEST_FAIL("LTA : A=$%02x", cpu.A);
+            TEST_FAIL("A=$%02x", cpu.A);
         }
     TEST_END;
+
+    TEST_BEGIN("SHLD");
+        LOAD(
+            0x22, 0x00, 0x40, // SHLD $4000
+        );
+
+        cpu.H = 0xaa; cpu.L = 0xbb;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0xbb) {
+            TEST_FAIL("M=$%02x", ram[0x4000]);
+        }
+        if (ram[0x4001] != 0xaa) {
+            TEST_FAIL("M'=$%02x", ram[0x4001]);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("LHLD");
+        LOAD(
+            0x2a, 0x00, 0x40, // LHLD $4000
+        );
+
+        ram[0x4000] = 0xaa;
+        ram[0x4001] = 0xbb;
+        cpu_step(&cpu);
+        if (cpu.H != 0xbb) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xaa) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+    TEST_END;
+
 }
