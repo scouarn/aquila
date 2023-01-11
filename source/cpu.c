@@ -384,7 +384,7 @@ void cpu_step(cpu_t *c) {
         case 0xf6: NIMPL; break; /* */
         case 0xf7: NIMPL; break; /* */
         case 0xf8: NIMPL; break; /* */
-        case 0xf9: NIMPL; break; /* */
+        case 0xf9: SPHL(); break; /* SPHL */
         case 0xfa: NIMPL; break; /* */
         case 0xfb: NIMPL; break; /* */
         case 0xfc: NIMPL; break; /* */

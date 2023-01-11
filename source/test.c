@@ -278,4 +278,19 @@ int main(void) {
         }
 
     TEST_END;
+
+
+    TEST_BEGIN("SPHL");
+        LOAD(
+            0xf9 // SPHL
+        );
+
+        cpu.H = 0xaa; cpu.L = 0xbb;
+        cpu_step(&cpu);
+        if (cpu.SP != 0xaabb) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
+
 }
