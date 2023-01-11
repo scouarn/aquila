@@ -15,6 +15,7 @@ void cpu_reset(cpu_t *c) {
     c->B = c->C = c->D = c->E = c->H = c->L = 0;
     c->PC = c->SP = 0;
     c->halted = c->interrupted = false;
+    c->interrupt_enabled = true;
 }
 
 void cpu_dump(cpu_t *c, FILE *fp) {
@@ -147,6 +148,9 @@ static addr_t fetch_addr(cpu_t *c) {
     c->FL = load(c, c->SP++);       \
     c->FL |= 2;                     \
 } while (0);
+
+#define SET_INT(VALUE) \
+    c->interrupt_enabled = VALUE;
 
 void cpu_step(cpu_t *c) {
 
@@ -403,7 +407,7 @@ void cpu_step(cpu_t *c) {
         case 0xf0: NIMPL; break; /* */
         case 0xf1: POP_PSW(); break; /* POP PSW */
         case 0xf2: NIMPL; break; /* */
-        case 0xf3: NIMPL; break; /* */
+        case 0xf3: SET_INT(false); break; /* DI */
         case 0xf4: NIMPL; break; /* */
         case 0xf5: PUSH(A, FL); break; /* PUSH PSW */
         case 0xf6: NIMPL; break; /* */
@@ -411,7 +415,7 @@ void cpu_step(cpu_t *c) {
         case 0xf8: NIMPL; break; /* */
         case 0xf9: SPHL(); break; /* SPHL */
         case 0xfa: NIMPL; break; /* */
-        case 0xfb: NIMPL; break; /* */
+        case 0xfb: SET_INT(true); break; /* EI */
         case 0xfc: NIMPL; break; /* */
         case 0xfd: NIMPL; break; /* */
         case 0xfe: NIMPL; break; /* */

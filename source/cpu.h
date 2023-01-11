@@ -22,7 +22,7 @@ typedef struct cpu_t {
     /* Program counter and stack pointer */
     addr_t PC, SP;
 
-    bool halted, interrupted;
+    bool halted, interrupted, interrupt_enabled;
 
     /* Memory */
     data_t *ram;

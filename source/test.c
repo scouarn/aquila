@@ -363,4 +363,27 @@ int main(void) {
         }
 
     TEST_END;
+
+    TEST_BEGIN("EI-DI");
+        LOAD(
+            0xf3, // DI
+            0xfb, // EI
+        );
+
+        if (cpu.interrupt_enabled != true) {
+            TEST_FAIL("Initial value of INTE=%d", cpu.interrupt_enabled);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.interrupt_enabled != false) {
+            TEST_FAIL("DI INTE=%d", cpu.interrupt_enabled);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.interrupt_enabled != true) {
+            TEST_FAIL("EI INTE=%d", cpu.interrupt_enabled);
+        }
+
+    TEST_END;
+
 }
