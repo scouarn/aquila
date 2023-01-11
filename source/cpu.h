@@ -14,13 +14,13 @@ typedef uint8_t  data_t;
 typedef struct cpu_t {
 
     /* Acc and flags */
-    uint8_t A, FL;
+    data_t A, FL;
 
     /* General purpose registers */
-    uint8_t B, C, D, E, H, L;
+    data_t B, C, D, E, H, L;
 
     /* Program counter and stack pointer */
-    uint16_t PC, SP;
+    addr_t PC, SP;
 
     bool halted, interrupted;
 

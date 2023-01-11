@@ -3,10 +3,11 @@
 
 #include "cpu.h"
 
-// https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
-
 #define NIMPL assert(0 && "Not implemented")
-#define UNUSED(X) (void)X
+
+
+// https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
+// http://dunfield.classiccmp.org/r/8080.txt
 
 void cpu_reset(cpu_t *c) {
     c->A = c->FL = 0;
@@ -24,10 +25,6 @@ void cpu_dump(cpu_t *c, FILE *fp) {
     fprintf(fp, "PC: %04x\n", c->PC);
     fprintf(fp, "SP: %04x\n", c->SP);
 }
-
-#define TICK do {           \
-    printf("tick\n");       \
-} while(0)
 
 static data_t load(cpu_t *c, addr_t addr) {
     *c->addr_bus = addr;
@@ -58,7 +55,7 @@ static addr_t fetch_addr(cpu_t *c) {
 #define HL  WORD(H, L)
 #define PSW WORD(A, FL)
 
-#define NOP() do { } while(0)
+#define NOP() do { } while (0)
 
 #define HALT() \
     c->halted = true;
@@ -88,13 +85,13 @@ static addr_t fetch_addr(cpu_t *c) {
     addr_t addr = fetch_addr(c);    \
     store(c, addr,   c->L);         \
     store(c, addr+1, c->H);         \
-} while(0);
+} while (0);
 
 #define LHLD() do {                 \
     addr_t addr = fetch_addr(c);    \
     c->L = load(c, addr);           \
     c->H = load(c, addr+1);         \
-} while(0);
+} while (0);
 
 #define MVI(DST) \
     c->DST = fetch(c);
@@ -102,17 +99,29 @@ static addr_t fetch_addr(cpu_t *c) {
 #define MVI_M() do {                \
     data_t data = fetch(c);         \
     store(c, HL, data);             \
-} while(0);
+} while (0);
 
 #define LXI(HI, LO) do {            \
     c->LO = fetch(c);               \
     c->HI = fetch(c);               \
-} while(0);
+} while (0);
 
 #define LXI_SP() do {               \
     c->SP  = fetch(c);              \
     c->SP |= fetch(c) << 8;         \
-} while(0);
+} while (0);
+
+#define XCHG() do {                 \
+    data_t hi = c->H;               \
+    data_t lo = c->L;               \
+    c->H = c->D;                    \
+    c->L = c->E;                    \
+    c->D = hi;                      \
+    c->E = lo;                      \
+} while (0);
+
+#define SPHL() \
+    c->SP = HL;
 
 void cpu_step(cpu_t *c) {
 
@@ -361,7 +370,7 @@ void cpu_step(cpu_t *c) {
         case 0xe8: NIMPL; break; /* */
         case 0xe9: NIMPL; break; /* */
         case 0xea: NIMPL; break; /* */
-        case 0xeb: NIMPL; break; /* */
+        case 0xeb: XCHG(); break; /* XCHG */
         case 0xec: NIMPL; break; /* */
         case 0xed: NIMPL; break; /* */
         case 0xee: NIMPL; break; /* */

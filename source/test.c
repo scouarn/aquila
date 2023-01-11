@@ -255,4 +255,27 @@ int main(void) {
         }
 
     TEST_END;
+
+    TEST_BEGIN("XCHG");
+        LOAD(
+            0xeb // XCHG
+        );
+
+        cpu.H = 0xaa; cpu.L = 0xbb;
+        cpu.D = 0xdd; cpu.E = 0xee;
+        cpu_step(&cpu);
+        if (cpu.H != 0xdd) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xee) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.D != 0xaa) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+        if (cpu.E != 0xbb) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+    TEST_END;
 }
