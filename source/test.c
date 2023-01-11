@@ -293,4 +293,44 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("PUSH"); // TODO: test with other registers
+        LOAD(
+            0xd5, // PUSH D
+        );
+
+        cpu.D = 0x8f; cpu.E = 0x9d;
+        cpu.SP = 0x3a2c;
+        cpu_step(&cpu);
+        if (ram[0x3a2b] != 0x8f) {
+            TEST_FAIL("M=$%02x", ram[0x3a2b]);
+        }
+        if (ram[0x3a2a] != 0x9d) {
+            TEST_FAIL("M'=$%02x", ram[0x3a2a]);
+        }
+        if (cpu.SP != 0x3a2a) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("POP"); // TODO: test with other registers
+        LOAD(
+            0xe1, // POP H
+        );
+
+        ram[0x1239] = 0x3d;
+        ram[0x123A] = 0x93;
+        cpu.SP = 0x1239;
+        cpu_step(&cpu);
+        if (cpu.L != 0x3D) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.H != 0x93) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.SP != 0x123b) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
 }

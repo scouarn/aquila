@@ -11,7 +11,7 @@
 
 void cpu_reset(cpu_t *c) {
     c->A = c->FL = 0;
-    c->FL = 2; // The bit which is always 1
+    c->FL |= 2; // The bit which is always 1
     c->B = c->C = c->D = c->E = c->H = c->L = 0;
     c->PC = c->SP = 0;
     c->halted = c->interrupted = false;
@@ -122,6 +122,22 @@ static addr_t fetch_addr(cpu_t *c) {
 
 #define SPHL() \
     c->SP = HL;
+
+#define PUSH(HI, LO) do {           \
+    store(c, --c->SP, c->HI);       \
+    store(c, --c->SP, c->LO);       \
+} while (0);
+
+#define POP(HI, LO) do {            \
+    c->LO = load(c, c->SP++);       \
+    c->HI = load(c, c->SP++);       \
+} while (0);
+
+#define POP_PSW() do {              \
+    c->A  = load(c, c->SP++);       \
+    c->FL = load(c, c->SP++);       \
+    c->FL |= 2;                     \
+} while (0);
 
 void cpu_step(cpu_t *c) {
 
@@ -328,11 +344,11 @@ void cpu_step(cpu_t *c) {
         case 0xbe: NIMPL; break; /* */
         case 0xbf: NIMPL; break; /* */
         case 0xc0: NIMPL; break; /* */
-        case 0xc1: NIMPL; break; /* */
+        case 0xc1: POP(B, C); break; /* POP B */
         case 0xc2: NIMPL; break; /* */
         case 0xc3: NIMPL; break; /* */
         case 0xc4: NIMPL; break; /* */
-        case 0xc5: NIMPL; break; /* */
+        case 0xc5: PUSH(B, C); break; /* PUSH B */
         case 0xc6: NIMPL; break; /* */
         case 0xc7: NIMPL; break; /* */
         case 0xc8: NIMPL; break; /* */
@@ -344,11 +360,11 @@ void cpu_step(cpu_t *c) {
         case 0xce: NIMPL; break; /* */
         case 0xcf: NIMPL; break; /* */
         case 0xd0: NIMPL; break; /* */
-        case 0xd1: NIMPL; break; /* */
+        case 0xd1: POP(D, E); break; /* POP D */
         case 0xd2: NIMPL; break; /* */
         case 0xd3: NIMPL; break; /* */
         case 0xd4: NIMPL; break; /* */
-        case 0xd5: NIMPL; break; /* */
+        case 0xd5: PUSH(D, E); break; /* PUSH D */
         case 0xd6: NIMPL; break; /* */
         case 0xd7: NIMPL; break; /* */
         case 0xd8: NIMPL; break; /* */
@@ -360,11 +376,11 @@ void cpu_step(cpu_t *c) {
         case 0xde: NIMPL; break; /* */
         case 0xdf: NIMPL; break; /* */
         case 0xe0: NIMPL; break; /* */
-        case 0xe1: NIMPL; break; /* */
+        case 0xe1: POP(H, L); break; /* POP H */
         case 0xe2: NIMPL; break; /* */
         case 0xe3: NIMPL; break; /* */
         case 0xe4: NIMPL; break; /* */
-        case 0xe5: NIMPL; break; /* */
+        case 0xe5: PUSH(H, L); break; /* PUSH H */
         case 0xe6: NIMPL; break; /* */
         case 0xe7: NIMPL; break; /* */
         case 0xe8: NIMPL; break; /* */
@@ -376,11 +392,11 @@ void cpu_step(cpu_t *c) {
         case 0xee: NIMPL; break; /* */
         case 0xef: NIMPL; break; /* */
         case 0xf0: NIMPL; break; /* */
-        case 0xf1: NIMPL; break; /* */
+        case 0xf1: POP_PSW(); break; /* POP PSW */
         case 0xf2: NIMPL; break; /* */
         case 0xf3: NIMPL; break; /* */
         case 0xf4: NIMPL; break; /* */
-        case 0xf5: NIMPL; break; /* */
+        case 0xf5: PUSH(A, FL); break; /* PUSH PSW */
         case 0xf6: NIMPL; break; /* */
         case 0xf7: NIMPL; break; /* */
         case 0xf8: NIMPL; break; /* */
