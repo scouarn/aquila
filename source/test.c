@@ -34,30 +34,65 @@ int main(void) {
     cpu.data_bus = &data_bus;
     cpu.addr_bus = &addr_bus;
 
-    TEST_BEGIN("mov");
-
+    TEST_BEGIN("MOV");
         LOAD(
-            0x7e, 0x00, 0x40, // MOV A, $4000
-            0x47,             // MOV B, A
-            0x46, 0x00, 0x50, // MOV $5000, B
+            0x7e, // MOV A, M
+            0x47, // MOV B, A
+            0x70, // MOV M, B
         );
+
         ram[0x4000] = 0xaa;
-
+        cpu.H = 0x40; cpu.L = 0x00;
         cpu_step(&cpu);
-        if (cpu.A != ram[0x4000]) {
-            TEST_FAIL("Load A");
+        if (cpu.A != 0xaa) {
+            TEST_FAIL("MOV A, M : A=$%02x", cpu.A);
         }
 
         cpu_step(&cpu);
-        if (cpu.B != cpu.A) {
-            TEST_FAIL("Store A");
+        if (cpu.B != 0xaa) {
+            TEST_FAIL("MOV B, A : B=$%02x", cpu.B);
         }
 
+        cpu.H = 0x50; cpu.L = 0x00;
         cpu_step(&cpu);
-        if (ram[0x5000] != cpu.B) {
-            TEST_FAIL("Store A");
+        if (ram[0x5000] != 0xaa) {
+            TEST_FAIL("MOV M, B : M=$%02x", ram[0x5000]);
         }
 
+    TEST_END;
+
+    TEST_BEGIN("STAX");
+        LOAD(
+            0x02, // STAX B
+            0x12, // STAX D
+        );
+
+        cpu.A = 0xaa;
+        cpu.B = 0x40; cpu.C = 0x00;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0xaa) {
+            TEST_FAIL("STAX B : M=$%02x", ram[0x4000]);
+        }
+
+        cpu.A = 0xbb;
+        cpu.D = 0x50; cpu.E = 0x00;
+        cpu_step(&cpu);
+        if (ram[0x5000] != 0xbb) {
+            TEST_FAIL("STAX D : M=$%02x", ram[0x5000]);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("STA");
+        LOAD(
+            0x32, 0x00, 0x40, // STA $4000
+        );
+
+        cpu.A = 0xaa;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0xaa) {
+            TEST_FAIL("STA : M=$%02x", ram[0x4000]);
+        }
     TEST_END;
 
 }

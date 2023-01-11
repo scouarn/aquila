@@ -9,8 +9,9 @@
 #define UNUSED(X) (void)X
 
 void cpu_reset(cpu_t *c) {
-    c->PSW = c->BC = c->DE = c->HL = 0;
+    c->A = c->FL = 0;
     c->FL = 2; // The bit which is always 1
+    c->B = c->C = c->D = c->E = c->H = c->L = 0;
     c->PC = c->SP = 0;
     c->halted = c->interrupted = false;
 }
@@ -51,26 +52,30 @@ static addr_t fetch_addr(cpu_t *c) {
     return (hi << 8) | lo;
 }
 
+#define WORD(HI, LO) ((c->HI << 8) | c->LO)
+
+
 #define NOP() do { } while(0)
 
-#define HALT() do {         \
-    c->halted = true;       \
-} while (0)
+#define HALT() \
+    c->halted = true;
 
-#define MOV_RR(D, S) do {               \
-    c->D = c->S;                        \
-} while(0)
+#define MOV_RR(DST, SRC) \
+    c->DST = c->SRC;
 
-#define MOV_MR(S) do {                  \
-    addr_t addr = fetch_addr(c);        \
-    store(c, addr, c->S);               \
-} while(0)
+#define MOV_MR(SRC) \
+    store(c, WORD(H, L), c->SRC);
 
-#define MOV_RM(D) do {                  \
-    addr_t addr = fetch_addr(c);        \
-    data_t data = load(c, addr);        \
-    c->D = data;                        \
-} while(0)
+#define MOV_RM(DEST) \
+    c->DEST = load(c, WORD(H, L));
+
+#define STAX(HI, LO) \
+    store(c, WORD(HI, LO), c->A);
+
+#define STA() \
+    store(c, fetch_addr(c), c->A);
+
+
 
 void cpu_step(cpu_t *c) {
 
@@ -86,7 +91,7 @@ void cpu_step(cpu_t *c) {
     switch (opc) {
         case 0x00: NOP(); break; /* NOP */
         case 0x01: NIMPL; break; /* */
-        case 0x02: NIMPL; break; /* */
+        case 0x02: STAX(B, C); break; /* STAX B */
         case 0x03: NIMPL; break; /* */
         case 0x04: NIMPL; break; /* */
         case 0x05: NIMPL; break; /* */
@@ -102,7 +107,7 @@ void cpu_step(cpu_t *c) {
         case 0x0f: NIMPL; break; /* */
         case 0x10: NOP(); break; /* NOP */
         case 0x11: NIMPL; break; /* */
-        case 0x12: NIMPL; break; /* */
+        case 0x12: STAX(D, E); break; /* STAX D */
         case 0x13: NIMPL; break; /* */
         case 0x14: NIMPL; break; /* */
         case 0x15: NIMPL; break; /* */
@@ -134,7 +139,7 @@ void cpu_step(cpu_t *c) {
         case 0x2f: NIMPL; break; /* */
         case 0x30: NOP(); break; /* NOP */
         case 0x31: NIMPL; break; /* */
-        case 0x32: NIMPL; break; /* */
+        case 0x32: STA(); break; /* STA addr */
         case 0x33: NIMPL; break; /* */
         case 0x34: NIMPL; break; /* */
         case 0x35: NIMPL; break; /* */
@@ -154,7 +159,7 @@ void cpu_step(cpu_t *c) {
         case 0x43: MOV_RR(B, E); break; /* MOV B, E */
         case 0x44: MOV_RR(B, H); break; /* MOV B, H */
         case 0x45: MOV_RR(B, L); break; /* MOV B, L */
-        case 0x46: MOV_RM(B);    break; /* MOV B, mem */
+        case 0x46: MOV_RM(B);    break; /* MOV B, M */
         case 0x47: MOV_RR(B, A); break; /* MOV B, A */
         case 0x48: MOV_RR(C, B); break; /* MOV C, B */
         case 0x49: MOV_RR(C, C); break; /* MOV C, C */
@@ -162,7 +167,7 @@ void cpu_step(cpu_t *c) {
         case 0x4b: MOV_RR(C, E); break; /* MOV C, E */
         case 0x4c: MOV_RR(C, H); break; /* MOV C, H */
         case 0x4d: MOV_RR(C, L); break; /* MOV C, L */
-        case 0x4e: MOV_RM(C);    break; /* MOV C, mem */
+        case 0x4e: MOV_RM(C);    break; /* MOV C, M */
         case 0x4f: MOV_RR(C, A); break; /* MOV C, A */
         case 0x50: MOV_RR(D, B); break; /* MOV D, B */
         case 0x51: MOV_RR(D, C); break; /* MOV D, C */
@@ -170,7 +175,7 @@ void cpu_step(cpu_t *c) {
         case 0x53: MOV_RR(D, E); break; /* MOV D, E */
         case 0x54: MOV_RR(D, H); break; /* MOV D, H */
         case 0x55: MOV_RR(D, L); break; /* MOV D, L */
-        case 0x56: MOV_RM(D);    break; /* MOV D, mem */
+        case 0x56: MOV_RM(D);    break; /* MOV D, M */
         case 0x57: MOV_RR(D, A); break; /* MOV D, A */
         case 0x58: MOV_RR(E, B); break; /* MOV E, B */
         case 0x59: MOV_RR(E, C); break; /* MOV E, C */
@@ -178,7 +183,7 @@ void cpu_step(cpu_t *c) {
         case 0x5b: MOV_RR(E, E); break; /* MOV E, E */
         case 0x5c: MOV_RR(E, H); break; /* MOV E, H */
         case 0x5d: MOV_RR(E, L); break; /* MOV E, L */
-        case 0x5e: MOV_RM(E);    break; /* MOV E, mem */
+        case 0x5e: MOV_RM(E);    break; /* MOV E, M */
         case 0x5f: MOV_RR(E, A); break; /* MOV E, A */
         case 0x60: MOV_RR(H, B); break; /* MOV H, B */
         case 0x61: MOV_RR(H, C); break; /* MOV H, C */
@@ -186,7 +191,7 @@ void cpu_step(cpu_t *c) {
         case 0x63: MOV_RR(H, E); break; /* MOV H, E */
         case 0x64: MOV_RR(H, H); break; /* MOV H, H */
         case 0x65: MOV_RR(H, L); break; /* MOV H, L */
-        case 0x66: MOV_RM(H);    break; /* MOV H, mem */
+        case 0x66: MOV_RM(H);    break; /* MOV H, M */
         case 0x67: MOV_RR(H, A); break; /* MOV H, A */
         case 0x68: MOV_RR(L, B); break; /* MOV L, B */
         case 0x69: MOV_RR(L, C); break; /* MOV L, C */
@@ -194,23 +199,23 @@ void cpu_step(cpu_t *c) {
         case 0x6b: MOV_RR(L, E); break; /* MOV L, E */
         case 0x6c: MOV_RR(L, H); break; /* MOV L, H */
         case 0x6d: MOV_RR(L, L); break; /* MOV L, L */
-        case 0x6e: MOV_RM(L);    break; /* MOV L, mem */
+        case 0x6e: MOV_RM(L);    break; /* MOV L, M */
         case 0x6f: MOV_RR(L, A); break; /* MOV L, A */
-        case 0x70: MOV_MR(B);    break; /* MOV mem, B */
-        case 0x71: MOV_MR(C);    break; /* MOV mem, C */
-        case 0x72: MOV_MR(D);    break; /* MOV mem, D */
-        case 0x73: MOV_MR(E);    break; /* MOV mem, E */
-        case 0x74: MOV_MR(H);    break; /* MOV mem, H */
-        case 0x75: MOV_MR(L);    break; /* MOV mem, L */
+        case 0x70: MOV_MR(B);    break; /* MOV M, B */
+        case 0x71: MOV_MR(C);    break; /* MOV M, C */
+        case 0x72: MOV_MR(D);    break; /* MOV M, D */
+        case 0x73: MOV_MR(E);    break; /* MOV M, E */
+        case 0x74: MOV_MR(H);    break; /* MOV M, H */
+        case 0x75: MOV_MR(L);    break; /* MOV M, L */
         case 0x76: HALT();       break; /* HLT */
-        case 0x77: MOV_MR(A);    break; /* MOV mem, A */
+        case 0x77: MOV_MR(A);    break; /* MOV M, A */
         case 0x78: MOV_RR(A, B); break; /* MOV A, B */
         case 0x79: MOV_RR(A, C); break; /* MOV A, C */
         case 0x7a: MOV_RR(A, D); break; /* MOV A, D */
         case 0x7b: MOV_RR(A, E); break; /* MOV A, E */
         case 0x7c: MOV_RR(A, H); break; /* MOV A, H */
         case 0x7d: MOV_RR(A, L); break; /* MOV A, L */
-        case 0x7e: MOV_RM(A);    break; /* MOV A, mem */
+        case 0x7e: MOV_RM(A);    break; /* MOV A, M */
         case 0x7f: MOV_RR(A, A); break; /* MOV A, A */
         case 0x80: NIMPL; break; /* */
         case 0x81: NIMPL; break; /* */

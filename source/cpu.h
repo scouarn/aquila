@@ -14,28 +14,10 @@ typedef uint8_t  data_t;
 typedef struct cpu_t {
 
     /* Acc and flags */
-    union {
-        uint16_t PSW;
-        struct { uint8_t A, FL; };
-    };
+    uint8_t A, FL;
 
-    /* B and C */
-    union {
-        struct { uint8_t B, C; };
-        uint16_t BC;
-    };
-
-    /* D and E */
-    union {
-        struct { uint8_t D, E; };
-        uint16_t DE;
-    };
-
-    /* H and L */
-    union {
-        struct { uint8_t H, L; };
-        uint16_t HL;
-    };
+    /* General purpose registers */
+    uint8_t B, C, D, E, H, L;
 
     /* Program counter and stack pointer */
     uint16_t PC, SP;
