@@ -173,6 +173,15 @@ static addr_t fetch_addr(cpu_t *c) {
 } while (0)
 #endif
 
+#define INC16(HI, LO, INC) do {     \
+    addr_t res = WORD(HI, LO) + INC;\
+    c->HI = res >> 8;               \
+    c->LO = res & 0xff;             \
+} while (0)
+
+#define INCSP(INC) \
+    c->SP += INC;
+
 void cpu_step(cpu_t *c) {
 
     /* Check if halted */
@@ -188,7 +197,7 @@ void cpu_step(cpu_t *c) {
         case 0x00: NOP();               break; /* NOP */
         case 0x01: LXI(B, C);           break; /* LXI B, d16 */
         case 0x02: STAX(B, C);          break; /* STAX B */
-        case 0x03: NIMPL;               break; /* */
+        case 0x03: INC16(B, C, 1);      break; /* INX B */
         case 0x04: NIMPL;               break; /* */
         case 0x05: NIMPL;               break; /* */
         case 0x06: MVI(B);              break; /* MVI B, d8 */
@@ -196,7 +205,7 @@ void cpu_step(cpu_t *c) {
         case 0x08: NOP();               break; /* NOP */
         case 0x09: NIMPL;               break; /* */
         case 0x0a: LDAX(B, C);          break; /* LDAX B */
-        case 0x0b: NIMPL;               break; /* */
+        case 0x0b: INC16(B, C, -1);     break; /* DCX B */
         case 0x0c: NIMPL;               break; /* */
         case 0x0d: NIMPL;               break; /* */
         case 0x0e: MVI(C);              break; /* MVI C, d8 */
@@ -204,7 +213,7 @@ void cpu_step(cpu_t *c) {
         case 0x10: NOP();               break; /* NOP */
         case 0x11: LXI(D, E);           break; /* LXI D, d16 */
         case 0x12: STAX(D, E);          break; /* STAX D */
-        case 0x13: NIMPL;               break; /* */
+        case 0x13: INC16(D, E, 1);      break; /* INX D */
         case 0x14: NIMPL;               break; /* */
         case 0x15: NIMPL;               break; /* */
         case 0x16: MVI(D);              break; /* MVI D, d8 */
@@ -212,7 +221,7 @@ void cpu_step(cpu_t *c) {
         case 0x18: NOP();               break; /* NOP */
         case 0x19: NIMPL;               break; /* */
         case 0x1a: LDAX(D, E);          break; /* LDAX D */
-        case 0x1b: NIMPL;               break; /* */
+        case 0x1b: INC16(D, E, -1);     break; /* DCX D */
         case 0x1c: NIMPL;               break; /* */
         case 0x1d: NIMPL;               break; /* */
         case 0x1e: MVI(E);              break; /* MVI E, d8 */
@@ -220,7 +229,7 @@ void cpu_step(cpu_t *c) {
         case 0x20: NOP();               break; /* NOP */
         case 0x21: LXI(H, L);           break; /* LXI H, d16 */
         case 0x22: SHLD();              break; /* SHLD a16 */
-        case 0x23: NIMPL;               break; /* */
+        case 0x23: INC16(H, L, 1);      break; /* INX H */
         case 0x24: NIMPL;               break; /* */
         case 0x25: NIMPL;               break; /* */
         case 0x26: MVI(H);              break; /* MVI H, d8 */
@@ -228,7 +237,7 @@ void cpu_step(cpu_t *c) {
         case 0x28: NOP();               break; /* NOP */
         case 0x29: NIMPL;               break; /* */
         case 0x2a: LHLD();              break; /* LHLD a16 */
-        case 0x2b: NIMPL;               break; /* */
+        case 0x2b: INC16(H, L, -1);     break; /* DCX H */
         case 0x2c: NIMPL;               break; /* */
         case 0x2d: NIMPL;               break; /* */
         case 0x2e: MVI(L);              break; /* MVI L, d8 */
@@ -236,7 +245,7 @@ void cpu_step(cpu_t *c) {
         case 0x30: NOP();               break; /* NOP */
         case 0x31: LXI_SP();            break; /* LXI SP, d16 */
         case 0x32: STA();               break; /* STA a16 */
-        case 0x33: NIMPL;               break; /* */
+        case 0x33: INCSP(1);            break; /* INX SP */
         case 0x34: NIMPL;               break; /* */
         case 0x35: NIMPL;               break; /* */
         case 0x36: MVI_M();             break; /* MVI M, d8 */
@@ -244,7 +253,7 @@ void cpu_step(cpu_t *c) {
         case 0x38: NIMPL;               break; /* */
         case 0x39: NIMPL;               break; /* */
         case 0x3a: LDA();               break; /* LDA a16 */
-        case 0x3b: NIMPL;               break; /* */
+        case 0x3b: INCSP(-1);           break; /* DCX SP */
         case 0x3c: NIMPL;               break; /* */
         case 0x3d: NIMPL;               break; /* */
         case 0x3e: MVI(A);              break; /* MVI A, d8 */

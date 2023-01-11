@@ -521,4 +521,90 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("INX");
+        LOAD(
+            0x03, // INX B
+            0x13, // INX D
+            0x23, // INX H
+            0x33, // INX SP
+        );
+
+        cpu.B = 0x0a; cpu.C = 0xff;
+        cpu_step(&cpu);
+        if (cpu.B != 0x0b) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+        if (cpu.C != 0x00) {
+            TEST_FAIL("C=$%02x", cpu.C);
+        }
+
+        cpu.D = 0xff; cpu.E = 0xff;
+        cpu_step(&cpu);
+        if (cpu.D != 0x00) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+        if (cpu.E != 0x00) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+        cpu.H = 0x0c; cpu.L = 0xfe;
+        cpu_step(&cpu);
+        if (cpu.H != 0x0c) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xff) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+        cpu.SP = 0x00ff;
+        cpu_step(&cpu);
+        if (cpu.SP != 0x0100) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("DCX");
+        LOAD(
+            0x0b, // DCX B
+            0x1b, // DCX D
+            0x2b, // DCX H
+            0x3b, // DCX SP
+        );
+
+        cpu.B = 0x01; cpu.C = 0x00;
+        cpu_step(&cpu);
+        if (cpu.B != 0x00) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+        if (cpu.C != 0xff) {
+            TEST_FAIL("B=$%02x", cpu.C);
+        }
+
+        cpu.D = 0x00; cpu.E = 0x00;
+        cpu_step(&cpu);
+        if (cpu.D != 0xff) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+        if (cpu.E != 0xff) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+        cpu.H = 0x0c; cpu.L = 0xfe;
+        cpu_step(&cpu);
+        if (cpu.H != 0x0c) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xfd) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+        cpu.SP = 0x0100;
+        cpu_step(&cpu);
+        if (cpu.SP != 0x00ff) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
+
 }
