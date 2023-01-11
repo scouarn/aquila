@@ -53,7 +53,10 @@ static addr_t fetch_addr(cpu_t *c) {
 }
 
 #define WORD(HI, LO) ((c->HI << 8) | c->LO)
-
+#define BC  WORD(B, C)
+#define DE  WORD(D, E)
+#define HL  WORD(H, L)
+#define PSW WORD(A, FL)
 
 #define NOP() do { } while(0)
 
@@ -64,17 +67,22 @@ static addr_t fetch_addr(cpu_t *c) {
     c->DST = c->SRC;
 
 #define MOV_MR(SRC) \
-    store(c, WORD(H, L), c->SRC);
+    store(c, HL, c->SRC);
 
 #define MOV_RM(DEST) \
-    c->DEST = load(c, WORD(H, L));
+    c->DEST = load(c, HL);
 
-#define STAX(HI, LO) \
-    store(c, WORD(HI, LO), c->A);
+#define STAX(REG16) \
+    store(c, REG16, c->A);
 
 #define STA() \
     store(c, fetch_addr(c), c->A);
 
+#define LDAX(REG16) \
+    c->A = load(c, REG16);
+
+#define LDA() \
+    c->A = load(c, fetch_addr(c));
 
 
 void cpu_step(cpu_t *c) {
@@ -91,7 +99,7 @@ void cpu_step(cpu_t *c) {
     switch (opc) {
         case 0x00: NOP(); break; /* NOP */
         case 0x01: NIMPL; break; /* */
-        case 0x02: STAX(B, C); break; /* STAX B */
+        case 0x02: STAX(BC); break; /* STAX B */
         case 0x03: NIMPL; break; /* */
         case 0x04: NIMPL; break; /* */
         case 0x05: NIMPL; break; /* */
@@ -99,7 +107,7 @@ void cpu_step(cpu_t *c) {
         case 0x07: NIMPL; break; /* */
         case 0x08: NOP(); break; /* NOP */
         case 0x09: NIMPL; break; /* */
-        case 0x0a: NIMPL; break; /* */
+        case 0x0a: LDAX(BC); break; /* LDAX B */
         case 0x0b: NIMPL; break; /* */
         case 0x0c: NIMPL; break; /* */
         case 0x0d: NIMPL; break; /* */
@@ -107,7 +115,7 @@ void cpu_step(cpu_t *c) {
         case 0x0f: NIMPL; break; /* */
         case 0x10: NOP(); break; /* NOP */
         case 0x11: NIMPL; break; /* */
-        case 0x12: STAX(D, E); break; /* STAX D */
+        case 0x12: STAX(DE); break; /* STAX D */
         case 0x13: NIMPL; break; /* */
         case 0x14: NIMPL; break; /* */
         case 0x15: NIMPL; break; /* */
@@ -115,7 +123,7 @@ void cpu_step(cpu_t *c) {
         case 0x17: NIMPL; break; /* */
         case 0x18: NOP(); break; /* NOP */
         case 0x19: NIMPL; break; /* */
-        case 0x1a: NIMPL; break; /* */
+        case 0x1a: LDAX(DE); break; /* LDAX D */
         case 0x1b: NIMPL; break; /* */
         case 0x1c: NIMPL; break; /* */
         case 0x1d: NIMPL; break; /* */
@@ -147,7 +155,7 @@ void cpu_step(cpu_t *c) {
         case 0x37: NIMPL; break; /* */
         case 0x38: NIMPL; break; /* */
         case 0x39: NIMPL; break; /* */
-        case 0x3a: NIMPL; break; /* */
+        case 0x3a: LDA(); break; /* LDA addr */
         case 0x3b: NIMPL; break; /* */
         case 0x3c: NIMPL; break; /* */
         case 0x3d: NIMPL; break; /* */
