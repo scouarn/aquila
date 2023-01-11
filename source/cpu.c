@@ -72,14 +72,14 @@ static addr_t fetch_addr(cpu_t *c) {
 #define MOV_RM(DEST) \
     c->DEST = load(c, HL);
 
-#define STAX(REG16) \
-    store(c, REG16, c->A);
+#define STAX(HI, LO) \
+    store(c, WORD(HI, LO), c->A);
 
 #define STA() \
     store(c, fetch_addr(c), c->A);
 
-#define LDAX(REG16) \
-    c->A = load(c, REG16);
+#define LDAX(HI, LO) \
+    c->A = load(c, WORD(HI, LO));
 
 #define LDA() \
     c->A = load(c, fetch_addr(c));
@@ -104,6 +104,16 @@ static addr_t fetch_addr(cpu_t *c) {
     store(c, HL, data);             \
 } while(0);
 
+#define LXI(HI, LO) do {            \
+    c->LO = fetch(c);               \
+    c->HI = fetch(c);               \
+} while(0);
+
+#define LXI_SP() do {               \
+    c->SP  = fetch(c);              \
+    c->SP |= fetch(c) << 8;         \
+} while(0);
+
 void cpu_step(cpu_t *c) {
 
     /* Check if halted */
@@ -117,68 +127,68 @@ void cpu_step(cpu_t *c) {
     /* Decode */
     switch (opc) {
         case 0x00: NOP(); break; /* NOP */
-        case 0x01: NIMPL; break; /* */
-        case 0x02: STAX(BC); break; /* STAX B */
+        case 0x01: LXI(B, C); break; /* LXI B, d16 */
+        case 0x02: STAX(B, C); break; /* STAX B */
         case 0x03: NIMPL; break; /* */
         case 0x04: NIMPL; break; /* */
         case 0x05: NIMPL; break; /* */
-        case 0x06: MVI(B); break; /* MVI B, data */
+        case 0x06: MVI(B); break; /* MVI B, d8 */
         case 0x07: NIMPL; break; /* */
         case 0x08: NOP(); break; /* NOP */
         case 0x09: NIMPL; break; /* */
-        case 0x0a: LDAX(BC); break; /* LDAX B */
+        case 0x0a: LDAX(B, C); break; /* LDAX B */
         case 0x0b: NIMPL; break; /* */
         case 0x0c: NIMPL; break; /* */
         case 0x0d: NIMPL; break; /* */
-        case 0x0e: MVI(C); break; /* MVI C, data */
+        case 0x0e: MVI(C); break; /* MVI C, d8 */
         case 0x0f: NIMPL; break; /* */
         case 0x10: NOP(); break; /* NOP */
-        case 0x11: NIMPL; break; /* */
-        case 0x12: STAX(DE); break; /* STAX D */
+        case 0x11: LXI(D, E); break; /* LXI D, d16 */
+        case 0x12: STAX(D, E); break; /* STAX D */
         case 0x13: NIMPL; break; /* */
         case 0x14: NIMPL; break; /* */
         case 0x15: NIMPL; break; /* */
-        case 0x16: MVI(D); break; /* MVI D, data */
+        case 0x16: MVI(D); break; /* MVI D, d8 */
         case 0x17: NIMPL; break; /* */
         case 0x18: NOP(); break; /* NOP */
         case 0x19: NIMPL; break; /* */
-        case 0x1a: LDAX(DE); break; /* LDAX D */
+        case 0x1a: LDAX(D, E); break; /* LDAX D */
         case 0x1b: NIMPL; break; /* */
         case 0x1c: NIMPL; break; /* */
         case 0x1d: NIMPL; break; /* */
-        case 0x1e: MVI(E); break; /* MVI E, data */
+        case 0x1e: MVI(E); break; /* MVI E, d8 */
         case 0x1f: NIMPL; break; /* */
         case 0x20: NOP(); break; /* NOP */
-        case 0x21: NIMPL; break; /* */
-        case 0x22: SHLD(); break; /* SHLD addr */
+        case 0x21: LXI(H, L); break; /* LXI H, d16 */
+        case 0x22: SHLD(); break; /* SHLD a16 */
         case 0x23: NIMPL; break; /* */
         case 0x24: NIMPL; break; /* */
         case 0x25: NIMPL; break; /* */
-        case 0x26: MVI(H); break; /* MVI H, data */
+        case 0x26: MVI(H); break; /* MVI H, d8 */
         case 0x27: NIMPL; break; /* */
         case 0x28: NOP(); break; /* NOP */
         case 0x29: NIMPL; break; /* */
-        case 0x2a: LHLD(); break; /* LHLD addr */
+        case 0x2a: LHLD(); break; /* LHLD a16 */
         case 0x2b: NIMPL; break; /* */
         case 0x2c: NIMPL; break; /* */
         case 0x2d: NIMPL; break; /* */
-        case 0x2e: MVI(L); break; /* MVI L, data */
+        case 0x2e: MVI(L); break; /* MVI L, d8 */
         case 0x2f: NIMPL; break; /* */
         case 0x30: NOP(); break; /* NOP */
-        case 0x31: NIMPL; break; /* */
-        case 0x32: STA(); break; /* STA addr */
+        case 0x31: LXI_SP(); break; /* LXI SP, d16 */
+        case 0x32: STA(); break; /* STA a16 */
         case 0x33: NIMPL; break; /* */
         case 0x34: NIMPL; break; /* */
         case 0x35: NIMPL; break; /* */
-        case 0x36: MVI_M(); break; /* MVI M, data */
+        case 0x36: MVI_M(); break; /* MVI M, d8 */
         case 0x37: NIMPL; break; /* */
         case 0x38: NIMPL; break; /* */
         case 0x39: NIMPL; break; /* */
-        case 0x3a: LDA(); break; /* LDA addr */
+        case 0x3a: LDA(); break; /* LDA a16 */
         case 0x3b: NIMPL; break; /* */
         case 0x3c: NIMPL; break; /* */
         case 0x3d: NIMPL; break; /* */
-        case 0x3e: MVI(A); break; /* MVI A, data */
+        case 0x3e: MVI(A); break; /* MVI A, d8 */
         case 0x3f: NIMPL; break; /* */
         case 0x40: MOV_RR(B, B); break; /* MOV B, B */
         case 0x41: MOV_RR(B, C); break; /* MOV B, C */

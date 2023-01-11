@@ -34,7 +34,7 @@ int main(void) {
     cpu.data_bus = &data_bus;
     cpu.addr_bus = &addr_bus;
 
-    TEST_BEGIN("MOV");
+    TEST_BEGIN("MOV"); // TODO: more tests for these instructions
         LOAD(
             0x7e, // MOV A, M
             0x47, // MOV B, A
@@ -217,4 +217,42 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("LXI");
+        LOAD(
+            0x01, 0xcc, 0xbb, // LXI B, $bbcc
+            0x11, 0xee, 0xdd, // LXI D, $ddee
+            0x21, 0x11, 0xff, // LXI H, $ff11
+            0x31, 0x44, 0x33, // LXI SP,$3344
+        );
+
+        cpu_step(&cpu);
+        if (cpu.B != 0xbb) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+        if (cpu.C != 0xcc) {
+            TEST_FAIL("C=$%02x", cpu.C);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.D != 0xdd) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+        if (cpu.E != 0xee) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.H != 0xff) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0x11) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.SP != 0x3344) {
+            TEST_FAIL("SP=$%04x", cpu.SP);
+        }
+
+    TEST_END;
 }
