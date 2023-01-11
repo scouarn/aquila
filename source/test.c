@@ -607,4 +607,68 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("DAD");
+        LOAD(
+            0x09, // DAD B
+            0x19, // DAD D
+            0x29, // DAD H
+            0x39, // DAD SP
+        );
+
+        cpu.H = 0x00; cpu.L = 0x00;
+
+        cpu.B = 0xab; cpu.C = 0xcd;
+        cpu_step(&cpu);
+        if (cpu.H != 0xab) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xcd) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.L != 0xcd) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.FL & 0x01) {
+            TEST_FAIL("C=%d", cpu.FL & 0x01);
+        }
+
+        cpu.D = 0x11; cpu.E = 0x22;
+        cpu_step(&cpu);
+        if (cpu.H != 0xbc) {
+            TEST_FAIL("H'=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xef) {
+            TEST_FAIL("L'=$%02x", cpu.L);
+        }
+        if (cpu.FL & 0x01) {
+            TEST_FAIL("C'=%d", cpu.FL & 0x01);
+        }
+
+        // Shift HL by one
+        cpu_step(&cpu);
+        if (cpu.H != 0x79) {
+            TEST_FAIL("H''=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xde) {
+            TEST_FAIL("L''=$%02x", cpu.L);
+        }
+        if (!(cpu.FL & 0x01)) {
+            TEST_FAIL("C''=%d", cpu.FL & 0x01);
+        }
+
+        cpu.SP = 0x1fff;
+        cpu_step(&cpu);
+        if (cpu.H != 0x99) {
+            TEST_FAIL("H'''=$%02x", cpu.H);
+        }
+        if (cpu.L != 0xdd) {
+            TEST_FAIL("L'''=$%02x", cpu.L);
+        }
+        if (cpu.FL & 0x01) {
+            TEST_FAIL("C'''=%d", cpu.FL & 0x01);
+        }
+
+
+
+    TEST_END;
 }

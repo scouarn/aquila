@@ -50,6 +50,11 @@ static addr_t fetch_addr(cpu_t *c) {
     return (hi << 8) | lo;
 }
 
+static void set_carry(cpu_t *c, bool b) {
+    c->FL &= ~(1 << 0);
+    c->FL |= b;
+}
+
 #define WORD(HI, LO) ((c->HI << 8) | c->LO)
 #define BC  WORD(B, C)
 #define DE  WORD(D, E)
@@ -179,8 +184,16 @@ static addr_t fetch_addr(cpu_t *c) {
     c->LO = res & 0xff;             \
 } while (0)
 
-#define INCSP(INC) \
+#define INC16_SP(INC) \
     c->SP += INC;
+
+#define DAD(RP) do {                \
+    uint32_t res = RP + HL;         \
+    c->H = (res >> 8) & 0xff;       \
+    c->L = res & 0xff;              \
+    set_carry(c, res > 0xffff);     \
+} while (0)
+
 
 void cpu_step(cpu_t *c) {
 
@@ -203,7 +216,7 @@ void cpu_step(cpu_t *c) {
         case 0x06: MVI(B);              break; /* MVI B, d8 */
         case 0x07: NIMPL;               break; /* */
         case 0x08: NOP();               break; /* NOP */
-        case 0x09: NIMPL;               break; /* */
+        case 0x09: DAD(BC);             break; /* DAD B */
         case 0x0a: LDAX(B, C);          break; /* LDAX B */
         case 0x0b: INC16(B, C, -1);     break; /* DCX B */
         case 0x0c: NIMPL;               break; /* */
@@ -219,7 +232,7 @@ void cpu_step(cpu_t *c) {
         case 0x16: MVI(D);              break; /* MVI D, d8 */
         case 0x17: NIMPL;               break; /* */
         case 0x18: NOP();               break; /* NOP */
-        case 0x19: NIMPL;               break; /* */
+        case 0x19: DAD(DE);             break; /* DAD D */
         case 0x1a: LDAX(D, E);          break; /* LDAX D */
         case 0x1b: INC16(D, E, -1);     break; /* DCX D */
         case 0x1c: NIMPL;               break; /* */
@@ -235,7 +248,7 @@ void cpu_step(cpu_t *c) {
         case 0x26: MVI(H);              break; /* MVI H, d8 */
         case 0x27: NIMPL;               break; /* */
         case 0x28: NOP();               break; /* NOP */
-        case 0x29: NIMPL;               break; /* */
+        case 0x29: DAD(HL);             break; /* DAD H */
         case 0x2a: LHLD();              break; /* LHLD a16 */
         case 0x2b: INC16(H, L, -1);     break; /* DCX H */
         case 0x2c: NIMPL;               break; /* */
@@ -245,15 +258,15 @@ void cpu_step(cpu_t *c) {
         case 0x30: NOP();               break; /* NOP */
         case 0x31: LXI_SP();            break; /* LXI SP, d16 */
         case 0x32: STA();               break; /* STA a16 */
-        case 0x33: INCSP(1);            break; /* INX SP */
+        case 0x33: INC16_SP(1);         break; /* INX SP */
         case 0x34: NIMPL;               break; /* */
         case 0x35: NIMPL;               break; /* */
         case 0x36: MVI_M();             break; /* MVI M, d8 */
         case 0x37: NIMPL;               break; /* */
         case 0x38: NIMPL;               break; /* */
-        case 0x39: NIMPL;               break; /* */
+        case 0x39: DAD(c->SP);          break; /* DAD SP */
         case 0x3a: LDA();               break; /* LDA a16 */
-        case 0x3b: INCSP(-1);           break; /* DCX SP */
+        case 0x3b: INC16_SP(-1);        break; /* DCX SP */
         case 0x3c: NIMPL;               break; /* */
         case 0x3d: NIMPL;               break; /* */
         case 0x3e: MVI(A);              break; /* MVI A, d8 */
