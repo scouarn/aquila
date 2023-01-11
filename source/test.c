@@ -3,13 +3,15 @@
 
 #include "cpu.h"
 
-#define LOAD(...) do {                      \
+#define LOAD_AT(OFF, ...) do {              \
     data_t prog[] = { __VA_ARGS__ };        \
-    memcpy(ram, prog, sizeof(prog));        \
+    memcpy(ram+OFF, prog, sizeof(prog));    \
 } while (0)
 
+#define LOAD(...) LOAD_AT(0, __VA_ARGS__)
+
 #define TEST_BEGIN(X) do {                  \
-    printf("Testing %-8s", X);           \
+    printf("Testing %-8s", X);              \
     fflush(stdout);                         \
     cpu_reset(&cpu);                        \
     memset(ram, 0, RAM_SIZE);               \
@@ -382,6 +384,139 @@ int main(void) {
         cpu_step(&cpu);
         if (cpu.interrupt_enabled != true) {
             TEST_FAIL("EI INTE=%d", cpu.interrupt_enabled);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("JMP");
+        /* Testing true condition */
+        LOAD_AT(0x0000, 0xc3, 0x50, 0x00); // JMP $0050
+        LOAD_AT(0x0050, 0xc2, 0x00, 0x10); // JNZ $1000
+        LOAD_AT(0x1000, 0xd2, 0x50, 0x10); // JNC $1050
+        LOAD_AT(0x1050, 0xe2, 0x00, 0x20); // JPO $2000
+        LOAD_AT(0x2000, 0xf2, 0x50, 0x20); // JP  $2050
+        LOAD_AT(0x2050, 0xca, 0x00, 0x30); // JZ  $3000
+        LOAD_AT(0x3000, 0xda, 0x50, 0x30); // JC  $3050
+        LOAD_AT(0x3050, 0xea, 0x00, 0x40); // JPE $4000
+        LOAD_AT(0x4000, 0xfa, 0x50, 0x40); // JM  $4050
+
+        /* Testing false condition */
+        LOAD_AT(0x4050,
+            0xc2, 0x00, 0x50, // JNZ $5000
+            0xd2, 0x50, 0x50, // JNC $5050
+            0xe2, 0x00, 0x60, // JPO $6000
+            0xf2, 0x50, 0x60, // JP  $6050
+            0xca, 0x00, 0x70, // JZ  $7000
+            0xda, 0x50, 0x70, // JC  $7050
+            0xea, 0x00, 0x80, // JPE $8000
+            0xfa, 0x50, 0x80, // JM  $8050
+        );
+
+        /* True condition */
+
+        cpu.FL = 0;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x0050) {
+            TEST_FAIL("JMP PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 6) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x1000) {
+            TEST_FAIL("JZ PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 0) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x1050) {
+            TEST_FAIL("JC PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 2) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x2000) {
+            TEST_FAIL("JPO PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 7) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x2050) {
+            TEST_FAIL("JP PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 6) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x3000) {
+            TEST_FAIL("JZ PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 0) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x3050) {
+            TEST_FAIL("JC PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 2) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4000) {
+            TEST_FAIL("JPE PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 7) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4050) {
+            TEST_FAIL("JM PC=$%04x", cpu.PC);
+        }
+
+
+        /* False condition */
+
+        cpu.FL = (1U << 6) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4053) {
+            TEST_FAIL("JNZ' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 0) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4056) {
+            TEST_FAIL("JNC' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 2) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4059) {
+            TEST_FAIL("JPO' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = (1U << 7) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x405c) {
+            TEST_FAIL("JP' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 6) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x405f) {
+            TEST_FAIL("JZ' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 0) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4062) {
+            TEST_FAIL("JC' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 2) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4065) {
+            TEST_FAIL("JPE' PC=$%04x", cpu.PC);
+        }
+
+        cpu.FL = ~(1U << 7) & 0xff;
+        cpu_step(&cpu);
+        if (cpu.PC != 0x4068) {
+            TEST_FAIL("JM' PC=$%04x", cpu.PC);
         }
 
     TEST_END;
