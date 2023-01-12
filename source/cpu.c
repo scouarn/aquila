@@ -255,7 +255,7 @@ void cpu_step(cpu_t *c) {
         case 0x2c: NIMPL;               break; /* */
         case 0x2d: NIMPL;               break; /* */
         case 0x2e: MVI(L);              break; /* MVI L, d8 */
-        case 0x2f: NIMPL;               break; /* */
+        case 0x2f: c->A = ~c->A;        break; /* CMA */
         case 0x30: NOP();               break; /* NOP */
         case 0x31: LXI_SP();            break; /* LXI SP, d16 */
         case 0x32: STA();               break; /* STA a16 */

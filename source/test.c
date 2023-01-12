@@ -410,6 +410,19 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("CMA");
+        LOAD(
+            0x2f, // CMA
+        );
+
+        cpu.A = 0x55;
+        cpu_step(&cpu);
+        if (cpu.A != 0xaa) {
+            TEST_FAIL("A=$%02x", cpu.A);
+        }
+
+    TEST_END;
+
     TEST_BEGIN("JMP");
         /* Testing true condition */
         LOAD_AT(0x0000, 0xc3, 0x50, 0x00); // JMP $0050
