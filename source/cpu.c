@@ -143,9 +143,6 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     c->E = lo;                      \
 } while (0);
 
-#define SPHL() \
-    c->SP = HL;
-
 #define XTHL() do {                 \
     data_t hi = c->H;               \
     data_t lo = c->L;               \
@@ -166,14 +163,10 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 } while (0);
 
 #define POP_PSW() do {              \
-    c->A  = load(c, c->SP++);       \
-    c->FL = load(c, c->SP++);       \
+    POP(A, FL);                     \
     c->FL |= 2;                     \
     c->FL &= ~(1 << 3);             \
 } while (0);
-
-#define SET_INT(VALUE) \
-    c->interrupt_enabled = VALUE;
 
 #define COND_Z   (c->FL & 0x40)
 #define COND_C   (c->FL & 0x01)
@@ -201,9 +194,6 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     c->HI = res >> 8;               \
     c->LO = res & 0xff;             \
 } while (0)
-
-#define INC16_SP(INC) \
-    c->SP += INC;
 
 #define DAD(RP) do {                \
     uint32_t res = RP + HL;         \
@@ -257,25 +247,26 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     update_ZSP(c, c->A);            \
 } while (0)
 
-#define INC8(REG, INC) do {         \
-    c->REG += INC;                  \
-    update_ZSP(c, c->REG);          \
-    if (INC > 0)                    \
-        set_flag(c, FLAG_A, (c->REG & 0x0f) == 0x00);\
-    else                            \
-        set_flag(c, FLAG_A, (c->REG & 0x0f) != 0x0f);\
-} while (0)
 
-#define INC8_M(INC) do {            \
-    data_t data = load(c, HL);      \
-    data += INC;                    \
-    if (INC > 0)                    \
-        set_flag(c, FLAG_A, (data & 0x0f) == 0x00);\
-    else                            \
-        set_flag(c, FLAG_A, (data & 0x0f) != 0x0f);\
-    update_ZSP(c, data);            \
-    store(c, HL, data);             \
-} while (0)
+static data_t inc8(cpu_t *c, data_t data, int inc) {
+    data += inc;
+    update_ZSP(c, data);
+    if (inc > 0) {
+        set_flag(c, FLAG_A, (data & 0x0f) == 0x00);
+    }
+    else {
+        set_flag(c, FLAG_A, (data & 0x0f) != 0x0f);
+    }
+
+    return data;
+}
+
+#define BITWIZE(OP, DATA) do {      \
+    c->A = c->A & DATA;             \
+    update_ZSP(c, c->A);            \
+    set_flag(c, FLAG_C, 0);         \
+} while (0);
+
 
 void cpu_step(cpu_t *c) {
 
@@ -293,64 +284,64 @@ void cpu_step(cpu_t *c) {
         case 0x01: LXI(B, C);           break; /* LXI B, d16 */
         case 0x02: STAX(B, C);          break; /* STAX B */
         case 0x03: INC16(B, C, 1);      break; /* INX B */
-        case 0x04: INC8(B, 1);          break; /* INR B */
-        case 0x05: INC8(B, -1);         break; /* DCR B */
+        case 0x04: c->B = inc8(c, c->B,  1);     break; /* INR B */
+        case 0x05: c->B = inc8(c, c->B, -1);     break; /* DCR B */
         case 0x06: MVI(B);              break; /* MVI B, d8 */
         case 0x07: RLC();               break; /* RLC */
         case 0x08: NOP();               break; /* NOP */
         case 0x09: DAD(BC);             break; /* DAD B */
         case 0x0a: LDAX(B, C);          break; /* LDAX B */
         case 0x0b: INC16(B, C, -1);     break; /* DCX B */
-        case 0x0c: INC8(C, 1);          break; /* INR C */
-        case 0x0d: INC8(C, -1);         break; /* DCR C */
+        case 0x0c: c->C = inc8(c, c->C,  1);     break; /* INR C */
+        case 0x0d: c->C = inc8(c, c->C, -1);     break; /* DCR C */
         case 0x0e: MVI(C);              break; /* MVI C, d8 */
         case 0x0f: RRC();               break; /* RRC */
         case 0x10: NOP();               break; /* NOP */
         case 0x11: LXI(D, E);           break; /* LXI D, d16 */
         case 0x12: STAX(D, E);          break; /* STAX D */
         case 0x13: INC16(D, E, 1);      break; /* INX D */
-        case 0x14: INC8(D, 1);          break; /* INR D */
-        case 0x15: INC8(D, -1);         break; /* DCR D */
+        case 0x14: c->D = inc8(c, c->D,  1);     break; /* INR D */
+        case 0x15: c->D = inc8(c, c->D, -1);     break; /* DCR D */
         case 0x16: MVI(D);              break; /* MVI D, d8 */
         case 0x17: RAL();               break; /* RAL */
         case 0x18: NOP();               break; /* NOP */
         case 0x19: DAD(DE);             break; /* DAD D */
         case 0x1a: LDAX(D, E);          break; /* LDAX D */
         case 0x1b: INC16(D, E, -1);     break; /* DCX D */
-        case 0x1c: INC8(E, 1);          break; /* INR E */
-        case 0x1d: INC8(E, -1);         break; /* DCR E */
+        case 0x1c: c->E = inc8(c, c->E,  1);     break; /* INR E */
+        case 0x1d: c->E = inc8(c, c->E, -1);     break; /* DCR E */
         case 0x1e: MVI(E);              break; /* MVI E, d8 */
         case 0x1f: RAR();               break; /* RAR */
         case 0x20: NOP();               break; /* NOP */
         case 0x21: LXI(H, L);           break; /* LXI H, d16 */
         case 0x22: SHLD();              break; /* SHLD a16 */
         case 0x23: INC16(H, L, 1);      break; /* INX H */
-        case 0x24: INC8(H, 1);          break; /* INR H */
-        case 0x25: INC8(H, -1);         break; /* DCR H */
+        case 0x24: c->H = inc8(c, c->H,  1);     break; /* INR H */
+        case 0x25: c->H = inc8(c, c->H, -1);     break; /* DCR H */
         case 0x26: MVI(H);              break; /* MVI H, d8 */
         case 0x27: DAA();               break; /* DAA */
         case 0x28: NOP();               break; /* NOP */
         case 0x29: DAD(HL);             break; /* DAD H */
         case 0x2a: LHLD();              break; /* LHLD a16 */
         case 0x2b: INC16(H, L, -1);     break; /* DCX H */
-        case 0x2c: INC8(L, 1);          break; /* INR L */
-        case 0x2d: INC8(L, -1);         break; /* DCR L */
+        case 0x2c: c->L = inc8(c, c->L,  1);    break; /* INR L */
+        case 0x2d: c->L = inc8(c, c->L, -1);    break; /* DCR L */
         case 0x2e: MVI(L);              break; /* MVI L, d8 */
         case 0x2f: c->A = ~c->A;        break; /* CMA */
         case 0x30: NOP();               break; /* NOP */
         case 0x31: LXI_SP();            break; /* LXI SP, d16 */
         case 0x32: STA();               break; /* STA a16 */
-        case 0x33: INC16_SP(1);         break; /* INX SP */
-        case 0x34: INC8_M(1);           break; /* INR M */
-        case 0x35: INC8_M(-1);          break; /* DCR M */
+        case 0x33: c->SP++;             break; /* INX SP */
+        case 0x34: store(c, HL, inc8(c, load(c, HL),  1)); break; /* INR M */
+        case 0x35: store(c, HL, inc8(c, load(c, HL), -1)); break; /* DCR M */
         case 0x36: MVI_M();             break; /* MVI M, d8 */
         case 0x37: c->FL |= 0x01;       break; /* STC */
-        case 0x38: NIMPL;               break; /* */
+        case 0x38: NOP();               break; /* NOP */
         case 0x39: DAD(c->SP);          break; /* DAD SP */
         case 0x3a: LDA();               break; /* LDA a16 */
-        case 0x3b: INC16_SP(-1);        break; /* DCX SP */
-        case 0x3c: INC8(A, 1);          break; /* INR A */
-        case 0x3d: INC8(A, -1);         break; /* DCR A */
+        case 0x3b: c->SP--;             break; /* DCX SP */
+        case 0x3c: c->A = inc8(c, c->A,  1);    break; /* INR A */
+        case 0x3d: c->A = inc8(c, c->A, -1);    break; /* DCR A */
         case 0x3e: MVI(A);              break; /* MVI A, d8 */
         case 0x3f: c->FL ^= 0x01;       break; /* CMC */
         case 0x40: MOV_RR(B, B);        break; /* MOV B, B */
@@ -449,14 +440,14 @@ void cpu_step(cpu_t *c) {
         case 0x9d: NIMPL;               break; /* */
         case 0x9e: NIMPL;               break; /* */
         case 0x9f: NIMPL;               break; /* */
-        case 0xa0: NIMPL;               break; /* */
-        case 0xa1: NIMPL;               break; /* */
-        case 0xa2: NIMPL;               break; /* */
-        case 0xa3: NIMPL;               break; /* */
-        case 0xa4: NIMPL;               break; /* */
-        case 0xa5: NIMPL;               break; /* */
-        case 0xa6: NIMPL;               break; /* */
-        case 0xa7: NIMPL;               break; /* */
+        case 0xa0: BITWIZE(&, c->B);    break; /* ANA B */
+        case 0xa1: BITWIZE(&, c->C);    break; /* ANA C */
+        case 0xa2: BITWIZE(&, c->D);    break; /* ANA D */
+        case 0xa3: BITWIZE(&, c->E);    break; /* ANA E */
+        case 0xa4: BITWIZE(&, c->H);    break; /* ANA H */
+        case 0xa5: BITWIZE(&, c->L);    break; /* ANA L */
+        case 0xa6: BITWIZE(&, load(c, HL)); break; /* ANA M */
+        case 0xa7: BITWIZE(&, c->A);    break; /* ANA A */
         case 0xa8: NIMPL;               break; /* */
         case 0xa9: NIMPL;               break; /* */
         case 0xaa: NIMPL;               break; /* */
@@ -519,7 +510,7 @@ void cpu_step(cpu_t *c) {
         case 0xe3: XTHL();              break; /* XTHL */
         case 0xe4: NIMPL;               break; /* */
         case 0xe5: PUSH(H, L);          break; /* PUSH H */
-        case 0xe6: NIMPL;               break; /* */
+        case 0xe6: BITWIZE(&, fetch(c));break; /* ANI d8 */
         case 0xe7: NIMPL;               break; /* */
         case 0xe8: NIMPL;               break; /* */
         case 0xe9: NIMPL;               break; /* */
@@ -532,15 +523,15 @@ void cpu_step(cpu_t *c) {
         case 0xf0: NIMPL;               break; /* */
         case 0xf1: POP_PSW();           break; /* POP PSW */
         case 0xf2: JMP(COND_P);         break; /* JP a16 */
-        case 0xf3: SET_INT(false);      break; /* DI */
+        case 0xf3: c->interrupt_enabled = false; break; /* DI */
         case 0xf4: NIMPL;               break; /* */
         case 0xf5: PUSH(A, FL);         break; /* PUSH PSW */
         case 0xf6: NIMPL;               break; /* */
         case 0xf7: NIMPL;               break; /* */
         case 0xf8: NIMPL;               break; /* */
-        case 0xf9: SPHL();              break; /* SPHL */
+        case 0xf9: c->SP = HL;          break; /* SPHL */
         case 0xfa: JMP(COND_M);         break; /* JM a16 */
-        case 0xfb: SET_INT(true);       break; /* EI */
+        case 0xfb: c->interrupt_enabled = true; break; /* EI */
         case 0xfc: NIMPL;               break; /* */
         case 0xfd: NIMPL;               break; /* */
         case 0xfe: NIMPL;               break; /* */

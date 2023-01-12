@@ -939,4 +939,75 @@ int main(void) {
         }
 
     TEST_END;
+
+    TEST_BEGIN("AND"); // TODO: test flags
+        LOAD(
+            0xa0,       // ANA B
+            0xa1,       // ANA C
+            0xa2,       // ANA D
+            0xa3,       // ANA E
+            0xa4,       // ANA H
+            0xa5,       // ANA L
+            0xa6,       // ANA M
+            0xa7,       // ANA A
+            0xe6, 0x5a, // ANI 0x5a
+        );
+
+        cpu.A = 0x00; cpu.B = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("ANA B A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x10; cpu.C = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("ANA C A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x55; cpu.D = 0xaa;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("ANA D A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xff; cpu.E = 0x0f;
+        cpu_step(&cpu);
+        if (cpu.A != 0x0f) {
+            TEST_FAIL("ANA E A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xf0; cpu.H = 0xf1;
+        cpu_step(&cpu);
+        if (cpu.A != 0xf0) {
+            TEST_FAIL("ANA H A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x33; cpu.L = 0xf2;
+        cpu_step(&cpu);
+        if (cpu.A != 0x32) {
+            TEST_FAIL("ANA L A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xaa; 
+        cpu.H = 0x40; cpu.L = 0x00;
+        ram[0x4000] = 0xdd;
+        cpu_step(&cpu);
+        if (cpu.A != 0x88) {
+            TEST_FAIL("ANA M A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xcc;
+        cpu_step(&cpu);
+        if (cpu.A != 0xcc) {
+            TEST_FAIL("ANA A A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x41;
+        cpu_step(&cpu);
+        if (cpu.A != 0x40) {
+            TEST_FAIL("ANI A=$%02x", cpu.A);
+        }
+
+    TEST_END;
 }
