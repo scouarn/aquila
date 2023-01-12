@@ -11,7 +11,7 @@
 #define LOAD(...) LOAD_AT(0, __VA_ARGS__)
 
 #define TEST_BEGIN(X) do {                  \
-    printf("Testing %-8s", X);              \
+    printf("Testing %-10s", X);             \
     fflush(stdout);                         \
     cpu_reset(&cpu);                        \
     memset(ram, 0, RAM_SIZE);               \
@@ -1010,4 +1010,148 @@ int main(void) {
         }
 
     TEST_END;
+
+    TEST_BEGIN("OR"); // TODO: test flags
+        LOAD(
+            0xb0,       // ORA B
+            0xb1,       // ORA C
+            0xb2,       // ORA D
+            0xb3,       // ORA E
+            0xb4,       // ORA H
+            0xb5,       // ORA L
+            0xb6,       // ORA M
+            0xb7,       // ORA A
+            0xf6, 0x5a, // ORI 0x5a
+        );
+
+        cpu.A = 0x00; cpu.B = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("ORA B A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x10; cpu.C = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x10) {
+            TEST_FAIL("ORA C A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x55; cpu.D = 0xaa;
+        cpu_step(&cpu);
+        if (cpu.A != 0xff) {
+            TEST_FAIL("ORA D A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xff; cpu.E = 0x0f;
+        cpu_step(&cpu);
+        if (cpu.A != 0xff) {
+            TEST_FAIL("ORA E A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xf0; cpu.H = 0xf1;
+        cpu_step(&cpu);
+        if (cpu.A != 0xf1) {
+            TEST_FAIL("ORA H A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x33; cpu.L = 0xf2;
+        cpu_step(&cpu);
+        if (cpu.A != 0xf3) {
+            TEST_FAIL("ORA L A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xaa; 
+        cpu.H = 0x40; cpu.L = 0x00;
+        ram[0x4000] = 0xdd;
+        cpu_step(&cpu);
+        if (cpu.A != 0xff) {
+            TEST_FAIL("ORA M A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xcc;
+        cpu_step(&cpu);
+        if (cpu.A != 0xcc) {
+            TEST_FAIL("ORA A A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x41;
+        cpu_step(&cpu);
+        if (cpu.A != 0x5b) {
+            TEST_FAIL("ORI A=$%02x", cpu.A);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("XOR"); // TODO: test flags
+        LOAD(
+            0xa8,       // XRA B
+            0xa9,       // XRA C
+            0xaa,       // XRA D
+            0xab,       // XRA E
+            0xac,       // XRA H
+            0xad,       // XRA L
+            0xae,       // XRA M
+            0xaf,       // XRA A
+            0xee, 0x5a, // XRI 0x5a
+        );
+
+        cpu.A = 0x00; cpu.B = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("XRA B A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x10; cpu.C = 0x00;
+        cpu_step(&cpu);
+        if (cpu.A != 0x10) {
+            TEST_FAIL("XRA C A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x55; cpu.D = 0xaa;
+        cpu_step(&cpu);
+        if (cpu.A != 0xff) {
+            TEST_FAIL("XRA D A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xff; cpu.E = 0x0f;
+        cpu_step(&cpu);
+        if (cpu.A != 0xf0) {
+            TEST_FAIL("XRA E A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xf0; cpu.H = 0xf1;
+        cpu_step(&cpu);
+        if (cpu.A != 0x01) {
+            TEST_FAIL("XRA H A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x33; cpu.L = 0xf2;
+        cpu_step(&cpu);
+        if (cpu.A != 0xc1) {
+            TEST_FAIL("XRA L A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xaa;
+        cpu.H = 0x40; cpu.L = 0x00;
+        ram[0x4000] = 0xdd;
+        cpu_step(&cpu);
+        if (cpu.A != 0x77) {
+            TEST_FAIL("XRA M A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0xcc;
+        cpu_step(&cpu);
+        if (cpu.A != 0x00) {
+            TEST_FAIL("ORA A A=$%02x", cpu.A);
+        }
+
+        cpu.A = 0x41;
+        cpu_step(&cpu);
+        if (cpu.A != 0x1b) {
+            TEST_FAIL("ORI A=$%02x", cpu.A);
+        }
+
+    TEST_END;
+
+
 }
