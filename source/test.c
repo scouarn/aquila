@@ -423,6 +423,48 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("ROT");
+        LOAD(
+            0x07, // RLC
+            0x17, // RAL
+            0x0f, // RRC
+            0x1f, // RAR
+        );
+
+        cpu.A = 0x55;
+        cpu_step(&cpu);
+        if (cpu.A != 0xaa) {
+            TEST_FAIL("RLC A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("RLC FL=$%02x", cpu.FL);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.A != 0x54) {
+            TEST_FAIL("RAL A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x03) {
+            TEST_FAIL("RAL FL=$%02x", cpu.FL);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.A != 0x2a) {
+            TEST_FAIL("RRC A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("RRC FL=$%02x", cpu.FL);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.A != 0x15) {
+            TEST_FAIL("RAR A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("RAR FL=$%02x", cpu.FL);
+        }
+    TEST_END;
+
     TEST_BEGIN("JMP");
         /* Testing true condition */
         LOAD_AT(0x0000, 0xc3, 0x50, 0x00); // JMP $0050

@@ -195,6 +195,29 @@ static void set_carry(cpu_t *c, bool b) {
     set_carry(c, res > 0xffff);     \
 } while (0)
 
+#define RLC() do {                  \
+    int bit = (c->A >> 7) & 0x01;   \
+    c->A = (c->A << 1) | bit;       \
+    set_carry(c, bit);              \
+} while (0)
+
+#define RRC() do {                  \
+    int bit = c->A & 0x01;          \
+    c->A = (c->A >> 1) | (bit << 7);\
+    set_carry(c, bit);              \
+} while (0)
+
+#define RAL() do {                  \
+    int bit = (c->A >> 7) & 0x01;   \
+    c->A = (c->A << 1) | (c->FL & 0x01);\
+    set_carry(c, bit);              \
+} while (0)
+
+#define RAR() do {                  \
+    int bit = c->A & 0x01;          \
+    c->A = (c->A >> 1) | ((c->FL & 0x01) << 7);\
+    set_carry(c, bit);              \
+} while (0)
 
 void cpu_step(cpu_t *c) {
 
@@ -215,7 +238,7 @@ void cpu_step(cpu_t *c) {
         case 0x04: NIMPL;               break; /* */
         case 0x05: NIMPL;               break; /* */
         case 0x06: MVI(B);              break; /* MVI B, d8 */
-        case 0x07: NIMPL;               break; /* */
+        case 0x07: RLC();               break; /* RLC */
         case 0x08: NOP();               break; /* NOP */
         case 0x09: DAD(BC);             break; /* DAD B */
         case 0x0a: LDAX(B, C);          break; /* LDAX B */
@@ -223,7 +246,7 @@ void cpu_step(cpu_t *c) {
         case 0x0c: NIMPL;               break; /* */
         case 0x0d: NIMPL;               break; /* */
         case 0x0e: MVI(C);              break; /* MVI C, d8 */
-        case 0x0f: NIMPL;               break; /* */
+        case 0x0f: RRC();               break; /* RRC */
         case 0x10: NOP();               break; /* NOP */
         case 0x11: LXI(D, E);           break; /* LXI D, d16 */
         case 0x12: STAX(D, E);          break; /* STAX D */
@@ -231,7 +254,7 @@ void cpu_step(cpu_t *c) {
         case 0x14: NIMPL;               break; /* */
         case 0x15: NIMPL;               break; /* */
         case 0x16: MVI(D);              break; /* MVI D, d8 */
-        case 0x17: NIMPL;               break; /* */
+        case 0x17: RAL();               break; /* RAL */
         case 0x18: NOP();               break; /* NOP */
         case 0x19: DAD(DE);             break; /* DAD D */
         case 0x1a: LDAX(D, E);          break; /* LDAX D */
@@ -239,7 +262,7 @@ void cpu_step(cpu_t *c) {
         case 0x1c: NIMPL;               break; /* */
         case 0x1d: NIMPL;               break; /* */
         case 0x1e: MVI(E);              break; /* MVI E, d8 */
-        case 0x1f: NIMPL;               break; /* */
+        case 0x1f: RAR();               break; /* RAR */
         case 0x20: NOP();               break; /* NOP */
         case 0x21: LXI(H, L);           break; /* LXI H, d16 */
         case 0x22: SHLD();              break; /* SHLD a16 */
