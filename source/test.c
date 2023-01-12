@@ -790,7 +790,7 @@ int main(void) {
         cpu.C = 0xff;
         cpu_step(&cpu);
         if (cpu.C != 0x00) {
-            TEST_FAIL("B=$%02x", cpu.B);
+            TEST_FAIL("C=$%02x", cpu.C);
         }
         if (cpu.FL != 0x56) {
             TEST_FAIL("INR C FL=$%02x", cpu.FL);
@@ -848,12 +848,12 @@ int main(void) {
             TEST_FAIL("A=$%02x", cpu.A);
         }
         if (cpu.FL != 0x12) {
-            TEST_FAIL("INR L FL=$%02x", cpu.FL);
+            TEST_FAIL("INR A FL=$%02x", cpu.FL);
         }
 
     TEST_END;
 
-    TEST_BEGIN("DCR"); // TODO: test flags
+    TEST_BEGIN("DCR");
         LOAD(
             0x05, // DCR B
             0x0d, // DCR C
@@ -870,11 +870,17 @@ int main(void) {
         if (cpu.B != 0xff) {
             TEST_FAIL("B=$%02x", cpu.B);
         }
+        if (cpu.FL != 0x86) {
+            TEST_FAIL("DCR B FL=$%02x", cpu.FL);
+        }
 
         cpu.C = 0xff;
         cpu_step(&cpu);
         if (cpu.C != 0xfe) {
-            TEST_FAIL("B=$%02x", cpu.B);
+            TEST_FAIL("C=$%02x", cpu.C);
+        }
+        if (cpu.FL != 0x92) {
+            TEST_FAIL("DCR C FL=$%02x", cpu.FL);
         }
 
         cpu.D = 0x1f;
@@ -882,11 +888,17 @@ int main(void) {
         if (cpu.D != 0x1e) {
             TEST_FAIL("D=$%02x", cpu.D);
         }
+        if (cpu.FL != 0x16) {
+            TEST_FAIL("DCR D FL=$%02x", cpu.FL);
+        }
 
         cpu.E = 0x80;
         cpu_step(&cpu);
         if (cpu.E != 0x7f) {
             TEST_FAIL("E=$%02x", cpu.E);
+        }
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("DCR E FL=$%02x", cpu.FL);
         }
 
         cpu.H = 0x7f;
@@ -894,11 +906,17 @@ int main(void) {
         if (cpu.H != 0x7e) {
             TEST_FAIL("H=$%02x", cpu.H);
         }
+        if (cpu.FL != 0x16) {
+            TEST_FAIL("DCR H FL=$%02x", cpu.FL);
+        }
 
         cpu.L = 0x0e;
         cpu_step(&cpu);
         if (cpu.L != 0x0d) {
             TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.FL != 0x12) {
+            TEST_FAIL("DCR L FL=$%02x", cpu.FL);
         }
 
         ram[0x4000] = 0x10;
@@ -907,11 +925,17 @@ int main(void) {
         if (ram[0x4000] != 0x0f) {
             TEST_FAIL("M=$%02x", ram[0x4000]);
         }
+        if (cpu.FL != 0x06) {
+            TEST_FAIL("DCR M FL=$%02x", cpu.FL);
+        }
 
         cpu.A = 0x0f;
         cpu_step(&cpu);
         if (cpu.A != 0x0e) {
             TEST_FAIL("A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x12) {
+            TEST_FAIL("DCR A FL=$%02x", cpu.FL);
         }
 
     TEST_END;

@@ -259,14 +259,20 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 
 #define INC8(REG, INC) do {         \
     c->REG += INC;                  \
-    set_flag(c, FLAG_A, (c->REG & 0x0f) == 0x00);\
     update_ZSP(c, c->REG);          \
+    if (INC > 0)                    \
+        set_flag(c, FLAG_A, (c->REG & 0x0f) == 0x00);\
+    else                            \
+        set_flag(c, FLAG_A, (c->REG & 0x0f) != 0x0f);\
 } while (0)
 
 #define INC8_M(INC) do {            \
     data_t data = load(c, HL);      \
     data += INC;                    \
-    set_flag(c, FLAG_A, (data & 0x0f) == 0x00);\
+    if (INC > 0)                    \
+        set_flag(c, FLAG_A, (data & 0x0f) == 0x00);\
+    else                            \
+        set_flag(c, FLAG_A, (data & 0x0f) != 0x0f);\
     update_ZSP(c, data);            \
     store(c, HL, data);             \
 } while (0)
