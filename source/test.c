@@ -18,10 +18,13 @@
     data_bus = 0;                           \
     addr_bus = 0;
 
-#define TEST_END printf("OK\n"); } while(0)
+#define TEST_END \
+    printf("\033[32mOK\033[0m\n"); \
+} while(0)
 
 #define TEST_FAIL(REASON, ...) \
-    printf("FAIL: " REASON "\n" __VA_OPT__(,) __VA_ARGS__); break
+    printf("\033[31mFAIL\033[0m: " REASON "\n" __VA_OPT__(,) __VA_ARGS__); \
+    break
 
 int main(void) {
 
@@ -759,6 +762,156 @@ int main(void) {
         }
         if (cpu.FL & 0x01) {
             TEST_FAIL("C'''=%d", cpu.FL & 0x01);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("INR");
+        LOAD(
+            0x04, // INR B
+            0x0c, // INR C
+            0x14, // INR D
+            0x1c, // INR E
+            0x24, // INR H
+            0x2c, // INR L
+            0x34, // INR M
+            0x3c, // INR A
+        );
+
+        cpu.B = 0x00;
+        cpu_step(&cpu);
+        if (cpu.B != 0x01) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("INR B FL=$%02x", cpu.FL);
+        }
+
+        cpu.C = 0xff;
+        cpu_step(&cpu);
+        if (cpu.C != 0x00) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+        if (cpu.FL != 0x56) {
+            TEST_FAIL("INR C FL=$%02x", cpu.FL);
+        }
+
+        cpu.D = 0x1f;
+        cpu_step(&cpu);
+        if (cpu.D != 0x20) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+        if (cpu.FL != 0x12) {
+            TEST_FAIL("INR D FL=$%02x", cpu.FL);
+        }
+
+        cpu.E = 0x80;
+        cpu_step(&cpu);
+        if (cpu.E != 0x81) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+        if (cpu.FL != 0x86) {
+            TEST_FAIL("INR E FL=$%02x", cpu.FL);
+        }
+
+        cpu.H = 0x7f;
+        cpu_step(&cpu);
+        if (cpu.H != 0x80) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+        if (cpu.FL != 0x92) {
+            TEST_FAIL("INR H FL=$%02x", cpu.FL);
+        }
+
+        cpu.L = 0x0e;
+        cpu_step(&cpu);
+        if (cpu.L != 0x0f) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+        if (cpu.FL != 0x06) {
+            TEST_FAIL("INR L FL=$%02x", cpu.FL);
+        }
+
+        ram[0x4000] = 0x10;
+        cpu.H = 0x40; cpu.L = 0x00;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0x11) {
+            TEST_FAIL("M=$%02x", ram[0x4000]);
+        }
+        if (cpu.FL != 0x06) {
+            TEST_FAIL("INR M FL=$%02x", cpu.FL);
+        }
+
+        cpu.A = 0x0f;
+        cpu_step(&cpu);
+        if (cpu.A != 0x10) {
+            TEST_FAIL("A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x12) {
+            TEST_FAIL("INR L FL=$%02x", cpu.FL);
+        }
+
+    TEST_END;
+
+    TEST_BEGIN("DCR"); // TODO: test flags
+        LOAD(
+            0x05, // DCR B
+            0x0d, // DCR C
+            0x15, // DCR D
+            0x1d, // DCR E
+            0x25, // DCR H
+            0x2d, // DCR L
+            0x35, // DCR M
+            0x3d, // DCR A
+        );
+
+        cpu.B = 0x00;
+        cpu_step(&cpu);
+        if (cpu.B != 0xff) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+
+        cpu.C = 0xff;
+        cpu_step(&cpu);
+        if (cpu.C != 0xfe) {
+            TEST_FAIL("B=$%02x", cpu.B);
+        }
+
+        cpu.D = 0x1f;
+        cpu_step(&cpu);
+        if (cpu.D != 0x1e) {
+            TEST_FAIL("D=$%02x", cpu.D);
+        }
+
+        cpu.E = 0x80;
+        cpu_step(&cpu);
+        if (cpu.E != 0x7f) {
+            TEST_FAIL("E=$%02x", cpu.E);
+        }
+
+        cpu.H = 0x7f;
+        cpu_step(&cpu);
+        if (cpu.H != 0x7e) {
+            TEST_FAIL("H=$%02x", cpu.H);
+        }
+
+        cpu.L = 0x0e;
+        cpu_step(&cpu);
+        if (cpu.L != 0x0d) {
+            TEST_FAIL("L=$%02x", cpu.L);
+        }
+
+        ram[0x4000] = 0x10;
+        cpu.H = 0x40; cpu.L = 0x00;
+        cpu_step(&cpu);
+        if (ram[0x4000] != 0x0f) {
+            TEST_FAIL("M=$%02x", ram[0x4000]);
+        }
+
+        cpu.A = 0x0f;
+        cpu_step(&cpu);
+        if (cpu.A != 0x0e) {
+            TEST_FAIL("A=$%02x", cpu.A);
         }
 
     TEST_END;

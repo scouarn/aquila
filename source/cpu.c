@@ -11,9 +11,8 @@
 // http://dunfield.classiccmp.org/r/8080.txt
 
 void cpu_reset(cpu_t *c) {
-    c->A = c->FL = 0;
-    c->FL |= 2; // The bit which is always 1
-    c->B = c->C = c->D = c->E = c->H = c->L = 0;
+    c->FL = 2; // The bit which is always 1
+    c->A = c->B = c->C = c->D = c->E = c->H = c->L = 0;
     c->PC = c->SP = 0;
     c->halted = c->interrupted = false;
     c->interrupt_enabled = true;
@@ -52,26 +51,25 @@ static addr_t fetch_addr(cpu_t *c) {
 }
 
 #define FLAG_C 0
-#define FLAG_P 3
+#define FLAG_P 2
 #define FLAG_A 4
 #define FLAG_Z 6
 #define FLAG_S 7
 
 static void set_flag(cpu_t *c, int f, bool b) {
     c->FL &= ~(1 << f);
-    if (b) c->FL |= 1;
+    if (b) c->FL |= (1 << f);
 }
 
-static void update_ZSP(cpu_t *c) {
-    set_flag(c, FLAG_Z, c->A == 0x00);
-    set_flag(c, FLAG_S, c->A  & 0x80);
+static void update_ZSP(cpu_t *c, data_t reg) {
+    set_flag(c, FLAG_Z, reg == 0x00);
+    set_flag(c, FLAG_S, reg  & 0x80);
 
     int p = 0;
     for (int mask = (1<<7); mask > 0; mask >>= 1)
-        if (c->A & mask) p++;
+        if (reg & mask) p++;
 
-    set_flag(c, FLAG_P, (p+1) % 2);
-
+    set_flag(c, FLAG_P, p % 2 == 0);
 }
 
 #define WORD(HI, LO) ((c->HI << 8) | c->LO)
@@ -171,6 +169,7 @@ static void update_ZSP(cpu_t *c) {
     c->A  = load(c, c->SP++);       \
     c->FL = load(c, c->SP++);       \
     c->FL |= 2;                     \
+    c->FL &= ~(1 << 3);             \
 } while (0);
 
 #define SET_INT(VALUE) \
@@ -255,7 +254,21 @@ static void update_ZSP(cpu_t *c) {
             c->FL |= 1;             \
     }                               \
                                     \
-    update_ZSP(c);                  \
+    update_ZSP(c, c->A);            \
+} while (0)
+
+#define INC8(REG, INC) do {         \
+    c->REG += INC;                  \
+    set_flag(c, FLAG_A, (c->REG & 0x0f) == 0x00);\
+    update_ZSP(c, c->REG);          \
+} while (0)
+
+#define INC8_M(INC) do {            \
+    data_t data = load(c, HL);      \
+    data += INC;                    \
+    set_flag(c, FLAG_A, (data & 0x0f) == 0x00);\
+    update_ZSP(c, data);            \
+    store(c, HL, data);             \
 } while (0)
 
 void cpu_step(cpu_t *c) {
@@ -274,64 +287,64 @@ void cpu_step(cpu_t *c) {
         case 0x01: LXI(B, C);           break; /* LXI B, d16 */
         case 0x02: STAX(B, C);          break; /* STAX B */
         case 0x03: INC16(B, C, 1);      break; /* INX B */
-        case 0x04: NIMPL;               break; /* */
-        case 0x05: NIMPL;               break; /* */
+        case 0x04: INC8(B, 1);          break; /* INR B */
+        case 0x05: INC8(B, -1);         break; /* DCR B */
         case 0x06: MVI(B);              break; /* MVI B, d8 */
         case 0x07: RLC();               break; /* RLC */
         case 0x08: NOP();               break; /* NOP */
         case 0x09: DAD(BC);             break; /* DAD B */
         case 0x0a: LDAX(B, C);          break; /* LDAX B */
         case 0x0b: INC16(B, C, -1);     break; /* DCX B */
-        case 0x0c: NIMPL;               break; /* */
-        case 0x0d: NIMPL;               break; /* */
+        case 0x0c: INC8(C, 1);          break; /* INR C */
+        case 0x0d: INC8(C, -1);         break; /* DCR C */
         case 0x0e: MVI(C);              break; /* MVI C, d8 */
         case 0x0f: RRC();               break; /* RRC */
         case 0x10: NOP();               break; /* NOP */
         case 0x11: LXI(D, E);           break; /* LXI D, d16 */
         case 0x12: STAX(D, E);          break; /* STAX D */
         case 0x13: INC16(D, E, 1);      break; /* INX D */
-        case 0x14: NIMPL;               break; /* */
-        case 0x15: NIMPL;               break; /* */
+        case 0x14: INC8(D, 1);          break; /* INR D */
+        case 0x15: INC8(D, -1);         break; /* DCR D */
         case 0x16: MVI(D);              break; /* MVI D, d8 */
         case 0x17: RAL();               break; /* RAL */
         case 0x18: NOP();               break; /* NOP */
         case 0x19: DAD(DE);             break; /* DAD D */
         case 0x1a: LDAX(D, E);          break; /* LDAX D */
         case 0x1b: INC16(D, E, -1);     break; /* DCX D */
-        case 0x1c: NIMPL;               break; /* */
-        case 0x1d: NIMPL;               break; /* */
+        case 0x1c: INC8(E, 1);          break; /* INR E */
+        case 0x1d: INC8(E, -1);         break; /* DCR E */
         case 0x1e: MVI(E);              break; /* MVI E, d8 */
         case 0x1f: RAR();               break; /* RAR */
         case 0x20: NOP();               break; /* NOP */
         case 0x21: LXI(H, L);           break; /* LXI H, d16 */
         case 0x22: SHLD();              break; /* SHLD a16 */
         case 0x23: INC16(H, L, 1);      break; /* INX H */
-        case 0x24: NIMPL;               break; /* */
-        case 0x25: NIMPL;               break; /* */
+        case 0x24: INC8(H, 1);          break; /* INR H */
+        case 0x25: INC8(H, -1);         break; /* DCR H */
         case 0x26: MVI(H);              break; /* MVI H, d8 */
         case 0x27: DAA();               break; /* DAA */
         case 0x28: NOP();               break; /* NOP */
         case 0x29: DAD(HL);             break; /* DAD H */
         case 0x2a: LHLD();              break; /* LHLD a16 */
         case 0x2b: INC16(H, L, -1);     break; /* DCX H */
-        case 0x2c: NIMPL;               break; /* */
-        case 0x2d: NIMPL;               break; /* */
+        case 0x2c: INC8(L, 1);          break; /* INR L */
+        case 0x2d: INC8(L, -1);         break; /* DCR L */
         case 0x2e: MVI(L);              break; /* MVI L, d8 */
         case 0x2f: c->A = ~c->A;        break; /* CMA */
         case 0x30: NOP();               break; /* NOP */
         case 0x31: LXI_SP();            break; /* LXI SP, d16 */
         case 0x32: STA();               break; /* STA a16 */
         case 0x33: INC16_SP(1);         break; /* INX SP */
-        case 0x34: NIMPL;               break; /* */
-        case 0x35: NIMPL;               break; /* */
+        case 0x34: INC8_M(1);           break; /* INR M */
+        case 0x35: INC8_M(-1);          break; /* DCR M */
         case 0x36: MVI_M();             break; /* MVI M, d8 */
         case 0x37: c->FL |= 0x01;       break; /* STC */
         case 0x38: NIMPL;               break; /* */
         case 0x39: DAD(c->SP);          break; /* DAD SP */
         case 0x3a: LDA();               break; /* LDA a16 */
         case 0x3b: INC16_SP(-1);        break; /* DCX SP */
-        case 0x3c: NIMPL;               break; /* */
-        case 0x3d: NIMPL;               break; /* */
+        case 0x3c: INC8(A, 1);          break; /* INR A */
+        case 0x3d: INC8(A, -1);         break; /* DCR A */
         case 0x3e: MVI(A);              break; /* MVI A, d8 */
         case 0x3f: c->FL ^= 0x01;       break; /* CMC */
         case 0x40: MOV_RR(B, B);        break; /* MOV B, B */
