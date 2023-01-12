@@ -12,6 +12,9 @@ main : machine
 run : source
 	rlwrap bin/source/main
 
+test: source
+	bin/source/test
+
 # Gen modules
 $(MODULES) :
 	@echo

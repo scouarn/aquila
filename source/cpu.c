@@ -3,6 +3,7 @@
 
 #include "cpu.h"
 
+
 #define NIMPL assert(0 && "Not implemented")
 
 
@@ -262,7 +263,7 @@ void cpu_step(cpu_t *c) {
         case 0x34: NIMPL;               break; /* */
         case 0x35: NIMPL;               break; /* */
         case 0x36: MVI_M();             break; /* MVI M, d8 */
-        case 0x37: NIMPL;               break; /* */
+        case 0x37: c->FL |= 0x01;       break; /* STC */
         case 0x38: NIMPL;               break; /* */
         case 0x39: DAD(c->SP);          break; /* DAD SP */
         case 0x3a: LDA();               break; /* LDA a16 */
@@ -270,7 +271,7 @@ void cpu_step(cpu_t *c) {
         case 0x3c: NIMPL;               break; /* */
         case 0x3d: NIMPL;               break; /* */
         case 0x3e: MVI(A);              break; /* MVI A, d8 */
-        case 0x3f: NIMPL;               break; /* */
+        case 0x3f: c->FL ^= 0x01;       break; /* CMC */
         case 0x40: MOV_RR(B, B);        break; /* MOV B, B */
         case 0x41: MOV_RR(B, C);        break; /* MOV B, C */
         case 0x42: MOV_RR(B, D);        break; /* MOV B, D */

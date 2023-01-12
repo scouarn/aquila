@@ -388,6 +388,28 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("STC-CMC");
+        LOAD(
+            0x37, // STC
+            0x3f, // CMC
+        );
+
+        if (cpu.FL != 0x02) { // The bit which is alway 1
+            TEST_FAIL("FL=$%02x", cpu.FL);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.FL != 0x03) {
+            TEST_FAIL("FL'=$%02x", cpu.FL);
+        }
+
+        cpu_step(&cpu);
+        if (cpu.FL != 0x02) {
+            TEST_FAIL("FL''=$%02x", cpu.FL);
+        }
+
+    TEST_END;
+
     TEST_BEGIN("JMP");
         /* Testing true condition */
         LOAD_AT(0x0000, 0xc3, 0x50, 0x00); // JMP $0050
@@ -667,8 +689,6 @@ int main(void) {
         if (cpu.FL & 0x01) {
             TEST_FAIL("C'''=%d", cpu.FL & 0x01);
         }
-
-
 
     TEST_END;
 }
