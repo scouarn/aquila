@@ -51,9 +51,27 @@ static addr_t fetch_addr(cpu_t *c) {
     return (hi << 8) | lo;
 }
 
-static void set_carry(cpu_t *c, bool b) {
-    c->FL &= ~(1 << 0);
-    c->FL |= b;
+#define FLAG_C 0
+#define FLAG_P 3
+#define FLAG_A 4
+#define FLAG_Z 6
+#define FLAG_S 7
+
+static void set_flag(cpu_t *c, int f, bool b) {
+    c->FL &= ~(1 << f);
+    if (b) c->FL |= 1;
+}
+
+static void update_ZSP(cpu_t *c) {
+    set_flag(c, FLAG_Z, c->A == 0x00);
+    set_flag(c, FLAG_S, c->A  & 0x80);
+
+    int p = 0;
+    for (int mask = (1<<7); mask > 0; mask >>= 1)
+        if (c->A & mask) p++;
+
+    set_flag(c, FLAG_P, (p+1) % 2);
+
 }
 
 #define WORD(HI, LO) ((c->HI << 8) | c->LO)
@@ -192,31 +210,52 @@ static void set_carry(cpu_t *c, bool b) {
     uint32_t res = RP + HL;         \
     c->H = (res >> 8) & 0xff;       \
     c->L = res & 0xff;              \
-    set_carry(c, res > 0xffff);     \
+    set_flag(c, FLAG_C, res > 0xffff);\
 } while (0)
 
 #define RLC() do {                  \
     int bit = (c->A >> 7) & 0x01;   \
     c->A = (c->A << 1) | bit;       \
-    set_carry(c, bit);              \
+    set_flag(c, FLAG_C, bit);       \
 } while (0)
 
 #define RRC() do {                  \
     int bit = c->A & 0x01;          \
     c->A = (c->A >> 1) | (bit << 7);\
-    set_carry(c, bit);              \
+    set_flag(c, FLAG_C, bit);       \
 } while (0)
 
 #define RAL() do {                  \
     int bit = (c->A >> 7) & 0x01;   \
     c->A = (c->A << 1) | (c->FL & 0x01);\
-    set_carry(c, bit);              \
+    set_flag(c, FLAG_C, bit);       \
 } while (0)
 
 #define RAR() do {                  \
     int bit = c->A & 0x01;          \
     c->A = (c->A >> 1) | ((c->FL & 0x01) << 7);\
-    set_carry(c, bit);              \
+    set_flag(c, FLAG_C, bit);       \
+} while (0)
+
+// TODO: find conditions on bits instead of comparing with >
+#define DAA() do {                  \
+    int lo = c->A & 0x0f;           \
+    int hc = c->FL & (1 << 4);      \
+    if (lo > 9 || hc) {             \
+        c->A += 6;                  \
+        if (lo + 6 > 0x0f)          \
+            c->FL |= (1 << 4);      \
+    }                               \
+                                    \
+    int hi = (c->A >> 4) & 0x0f;    \
+    int cr = c->FL & 1;             \
+    if (hi > 9 || cr) {             \
+        c->A += (6 << 4);           \
+        if (hi + 6 > 0x0f)          \
+            c->FL |= 1;             \
+    }                               \
+                                    \
+    update_ZSP(c);                  \
 } while (0)
 
 void cpu_step(cpu_t *c) {
@@ -270,7 +309,7 @@ void cpu_step(cpu_t *c) {
         case 0x24: NIMPL;               break; /* */
         case 0x25: NIMPL;               break; /* */
         case 0x26: MVI(H);              break; /* MVI H, d8 */
-        case 0x27: NIMPL;               break; /* */
+        case 0x27: DAA();               break; /* DAA */
         case 0x28: NOP();               break; /* NOP */
         case 0x29: DAD(HL);             break; /* DAD H */
         case 0x2a: LHLD();              break; /* LHLD a16 */

@@ -423,6 +423,22 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("DAA");
+        LOAD(
+            0x27, // DAA
+        );
+
+        cpu.A = 0x9b;
+        cpu_step(&cpu);
+        if (cpu.A != 0x01) {
+            TEST_FAIL("A=$%02x", cpu.A);
+        }
+        if (cpu.FL != 0x13) {
+            TEST_FAIL("FL=$%02x", cpu.FL);
+        }
+
+    TEST_END;
+
     TEST_BEGIN("ROT");
         LOAD(
             0x07, // RLC
