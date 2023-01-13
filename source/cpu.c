@@ -3,11 +3,29 @@
 
 #include "cpu.h"
 
+// https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
+// http://dunfield.classiccmp.org/r/8080.txt
+
 
 #define NIMPL assert(0 && "Not implemented")
 
-// https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
-// http://dunfield.classiccmp.org/r/8080.txt
+#define HI_BYTE(X) ((X >> 8) & 0xff)
+#define LO_BYTE(X) (X & 0xff)
+#define WORD(H, L) ((H << 8) | L)
+
+#define BC  WORD(c->B, c->C)
+#define DE  WORD(c->D, c->E)
+#define HL  WORD(c->H, c->L)
+#define PSW WORD(c->A, c->FL)
+
+#define COND_Z   (c->FL & 0x40)
+#define COND_C   (c->FL & 0x01)
+#define COND_PE  (c->FL & 0x04)
+#define COND_M   (c->FL & 0x80)
+#define COND_NZ  (!COND_Z)
+#define COND_NC  (!COND_C)
+#define COND_PO  (!COND_PE)
+#define COND_P   (!COND_M)
 
 void cpu_reset(cpu_t *c) {
     c->FL = 2; // The bit which is always 1
@@ -59,21 +77,15 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 }
 
 static void push_word(cpu_t *c, addr_t word) {
-    c->store(--c->SP, (word >> 8) & 0xff);
-    c->store(--c->SP, word & 0xff);
+    c->store(--c->SP, HI_BYTE(word));
+    c->store(--c->SP, LO_BYTE(word));
 }
 
 static addr_t pop_word(cpu_t *c) {
-    data_t hi = c->load(c->SP++);
     data_t lo = c->load(c->SP++);
-    return (hi << 8) | lo;
+    data_t hi = c->load(c->SP++);
+    return WORD(hi, lo);
 }
-
-#define WORD(HI, LO) ((c->HI << 8) | c->LO)
-#define BC  WORD(B, C)
-#define DE  WORD(D, E)
-#define HL  WORD(H, L)
-#define PSW WORD(A, FL)
 
 #define NOP() do { } while (0)
 
@@ -87,13 +99,13 @@ static addr_t pop_word(cpu_t *c) {
     c->DEST = c->load(HL);
 
 #define STAX(HI, LO) \
-    c->store(WORD(HI, LO), c->A);
+    c->store(WORD(c->HI, c->LO), c->A);
 
 #define STA() \
     c->store(fetch_addr(c), c->A);
 
 #define LDAX(HI, LO) \
-    c->A = c->load(WORD(HI, LO));
+    c->A = c->load(WORD(c->HI, c->LO));
 
 #define LDA() \
     c->A = c->load(fetch_addr(c));
@@ -138,21 +150,16 @@ static addr_t pop_word(cpu_t *c) {
 } while (0);
 
 #define XTHL() do {                 \
-    data_t hi = c->H;               \
-    data_t lo = c->L;               \
-    c->L = c->load(c->SP++);     \
-    c->H = c->load(c->SP++);     \
-    c->store(--c->SP, hi);          \
-    c->store(--c->SP, lo);          \
+    addr_t word = pop_word(c);      \
+    push_word(c, HL);               \
+    c->H = HI_BYTE(word);           \
+    c->L = LO_BYTE(word);           \
 } while (0);
-
-#define PUSH(HI, LO) \
-    push_word(c, WORD(HI, LO))
 
 #define POP(HI, LO) do {            \
     addr_t word = pop_word(c);      \
-    c->LO = (word >> 8) | 0xff;     \
-    c->HI = word & 0xff;            \
+    c->HI = HI_BYTE(word);          \
+    c->LO = LO_BYTE(word);          \
 } while (0);
 
 #define POP_PSW() do {              \
@@ -160,15 +167,6 @@ static addr_t pop_word(cpu_t *c) {
     c->FL |= 2;                     \
     c->FL &= ~(1 << 3);             \
 } while (0);
-
-#define COND_Z   (c->FL & 0x40)
-#define COND_C   (c->FL & 0x01)
-#define COND_PE  (c->FL & 0x04)
-#define COND_M   (c->FL & 0x80)
-#define COND_NZ  (!COND_Z)
-#define COND_NC  (!COND_C)
-#define COND_PO  (!COND_PE)
-#define COND_P   (!COND_M)
 
 // TODO: figure out if the addresses are always fetched
 #define JMP(COND) do {              \
@@ -180,34 +178,30 @@ static addr_t pop_word(cpu_t *c) {
 #define CALL(COND) do {             \
     addr_t addr = fetch_addr(c);    \
     if (!(COND)) break;             \
-    c->store(--c->SP, (c->PC >> 8) & 0xff);\
-    c->store(--c->SP, c->PC & 0xff);\
+    push_word(c, c->PC);            \
     c->PC = addr;                   \
 } while (0)
 
 #define RET(COND) do {              \
     if (!(COND)) break;             \
-    data_t hi = c->load(c->SP++);   \
-    data_t lo = c->load(c->SP++);   \
-    c->PC = (hi << 8) | lo;         \
+    c->PC = pop_word(c);            \
 } while (0)
 
 #define RST(N) do {                 \
-    c->store(--c->SP, (c->PC >> 8) & 0xff);\
-    c->store(--c->SP, c->PC & 0xff);\
+    push_word(c, c->PC);            \
     c->PC = N << 3;                 \
 } while (0)
 
 #define INC16(HI, LO, INC) do {     \
-    addr_t res = WORD(HI, LO) + (INC);\
-    c->HI = res >> 8;               \
-    c->LO = res & 0xff;             \
+    addr_t res = WORD(c->HI, c->LO) + (INC);\
+    c->HI = HI_BYTE(res);           \
+    c->LO = LO_BYTE(res);           \
 } while (0)
 
-#define DAD(RP) do {                \
-    uint32_t res = (RP) + HL;       \
-    c->H = (res >> 8) & 0xff;       \
-    c->L = res & 0xff;              \
+#define DAD(DATA) do {              \
+    uint32_t res = (DATA) + HL;     \
+    c->H = HI_BYTE(res);            \
+    c->L = LO_BYTE(res);            \
     set_flag(c, FLAG_C, res > 0xffff);\
 } while (0)
 
@@ -292,6 +286,15 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     data_t cr = res ^ data ^ c->A;  \
     c->A = res;                     \
     update_ZSP(c, c->A);            \
+    set_flag(c, FLAG_C, cr & 0x80); \
+    set_flag(c, FLAG_A, !(cr & 0x08)); \
+} while (0);
+
+#define CMP(DATA) do {              \
+    data_t data = ~(DATA);          \
+    data_t res = c->A + data;       \
+    data_t cr = res ^ data ^ c->A;  \
+    update_ZSP(c, res);             \
     set_flag(c, FLAG_C, cr & 0x80); \
     set_flag(c, FLAG_A, !(cr & 0x08)); \
 } while (0);
@@ -494,20 +497,20 @@ void cpu_step(cpu_t *c) {
         case 0xb5: BITWIZE(|, c->L);                    break; // ORA L
         case 0xb6: BITWIZE(|, c->load(HL));             break; // ORA M
         case 0xb7: BITWIZE(|, c->A);                    break; // ORA A
-        case 0xb8: NIMPL;                               break; //
-        case 0xb9: NIMPL;                               break; //
-        case 0xba: NIMPL;                               break; //
-        case 0xbb: NIMPL;                               break; //
-        case 0xbc: NIMPL;                               break; //
-        case 0xbd: NIMPL;                               break; //
-        case 0xbe: NIMPL;                               break; //
-        case 0xbf: NIMPL;                               break; //
+        case 0xb8: CMP(c->B);                           break; // CMP B
+        case 0xb9: CMP(c->C);                           break; // CMP C
+        case 0xba: CMP(c->D);                           break; // CMP D
+        case 0xbb: CMP(c->E);                           break; // CMP E
+        case 0xbc: CMP(c->H);                           break; // CMP H
+        case 0xbd: CMP(c->L);                           break; // CMP L
+        case 0xbe: CMP(c->load(HL));                    break; // CMP M
+        case 0xbf: CMP(c->A);                           break; // CMP A
         case 0xc0: RET(COND_NZ);                        break; // RNZ
         case 0xc1: POP(B, C);                           break; // POP B
         case 0xc2: JMP(COND_NZ);                        break; // JNZ a16
         case 0xc3: JMP(true);                           break; // JMP a16
         case 0xc4: CALL(COND_NZ);                       break; // CNZ a16
-        case 0xc5: PUSH(B, C);                          break; // PUSH B
+        case 0xc5: push_word(c, BC);                    break; // PUSH B
         case 0xc6: ADC(fetch(c), 0);                    break; // ADI d8
         case 0xc7: RST(0);                              break; // RST 0
         case 0xc8: RET(COND_Z);                         break; // RZ
@@ -523,7 +526,7 @@ void cpu_step(cpu_t *c) {
         case 0xd2: JMP(COND_NC);                        break; // JNC a16
         case 0xd3: c->output(fetch(c), c->A);           break; // OUT p8
         case 0xd4: CALL(COND_NC);                       break; // CNC a16
-        case 0xd5: PUSH(D, E);                          break; // PUSH D
+        case 0xd5: push_word(c, DE);                    break; // PUSH D
         case 0xd6: SBB(fetch(c), 0);                    break; // SUI d8
         case 0xd7: RST(2);                              break; // RST 2
         case 0xd8: RET(COND_C);                         break; // RC
@@ -539,7 +542,7 @@ void cpu_step(cpu_t *c) {
         case 0xe2: JMP(COND_PO);                        break; // JPO a16
         case 0xe3: XTHL();                              break; // XTHL
         case 0xe4: CALL(COND_PO);                       break; // CPO a16
-        case 0xe5: PUSH(H, L);                          break; // PUSH H
+        case 0xe5: push_word(c, HL);                    break; // PUSH H
         case 0xe6: BITWIZE(&, fetch(c));                break; // ANI d8
         case 0xe7: RST(4);                              break; // RST 4
         case 0xe8: RET(COND_PE);                        break; // RPE
@@ -555,7 +558,7 @@ void cpu_step(cpu_t *c) {
         case 0xf2: JMP(COND_P);                         break; // JP a16
         case 0xf3: c->interrupt_enabled = false;        break; // DI
         case 0xf4: CALL(COND_P);                        break; // CP a16
-        case 0xf5: PUSH(A, FL);                         break; // PUSH PSW
+        case 0xf5: push_word(c, PSW);                   break; // PUSH PSW
         case 0xf6: BITWIZE(|, fetch(c));                break; // ORI d8
         case 0xf7: RST(6);                              break; // RST 6
         case 0xf8: RET(COND_M);                         break; // RM
@@ -564,9 +567,8 @@ void cpu_step(cpu_t *c) {
         case 0xfb: c->interrupt_enabled = true;         break; // EI
         case 0xfc: CALL(COND_M);                        break; // CM a16
         case 0xfd: CALL(true);                          break; // *CALL a16
-        case 0xfe: NIMPL;                               break; //
+        case 0xfe: CMP(fetch(c));                       break; // CMI d8
         case 0xff: RST(7);                              break; // RST 7
-        default:   NIMPL;                               break; //
     }
 
 }
