@@ -494,7 +494,7 @@ void cpu_step(cpu_t *c) {
         case 0xd0: NIMPL;                               break; //
         case 0xd1: POP(D, E);                           break; // POP D
         case 0xd2: JMP(COND_NC);                        break; // JNC a16
-        case 0xd3: NIMPL;                               break; //
+        case 0xd3: c->output(fetch(c), c->A);           break; // OUT p8
         case 0xd4: NIMPL;                               break; //
         case 0xd5: PUSH(D, E);                          break; // PUSH D
         case 0xd6: SBB(fetch(c), 0);                    break; // SUI d8
@@ -502,7 +502,7 @@ void cpu_step(cpu_t *c) {
         case 0xd8: NIMPL;                               break; //
         case 0xd9: NIMPL;                               break; //
         case 0xda: JMP(COND_C);                         break; // JC a16
-        case 0xdb: NIMPL;                               break; //
+        case 0xdb: c->A = c->input(fetch(c));           break; // IN p8
         case 0xdc: NIMPL;                               break; //
         case 0xdd: NIMPL;                               break; //
         case 0xde: SBB(fetch(c), 1);                    break; // SBI d8

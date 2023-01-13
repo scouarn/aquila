@@ -1083,4 +1083,19 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("IN-OUT");
+        LOAD(
+            0xdb, 0x80, // IN  $80
+            0xd3, 0x81, // OUT $81
+        );
+
+        ram[0x80] = 0x99;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x99);
+
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(ram[0x81], 0x99);
+
+    TEST_END;
+
 }
