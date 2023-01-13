@@ -264,14 +264,24 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_C, 0);         \
 } while (0);
 
-#define ADD(DATA) do {              \
-    data_t data = DATA;             \
-    int hc = data & c->A & 0x08;    \
-    int cr = data & c->A & 0x80;    \
-    c->A += data;                   \
+#define ADC(DATA, CMASK) do {       \
+    data_t data = (DATA);           \
+    data_t res = c->A + data + (c->FL & CMASK);\
+    data_t cr = res ^ data ^ c->A;  \
+    c->A = res;                     \
     update_ZSP(c, c->A);            \
-    set_flag(c, FLAG_C, hc);        \
-    set_flag(c, FLAG_A, cr);        \
+    set_flag(c, FLAG_C, cr & 0x80); \
+    set_flag(c, FLAG_A, cr & 0x08); \
+} while (0);
+
+#define SBB(DATA, CMASK) do {       \
+    data_t data = ~(DATA);          \
+    data_t res = c->A + data + !(c->FL & CMASK);\
+    data_t cr = res ^ data ^ c->A;  \
+    c->A = res;                     \
+    update_ZSP(c, c->A);            \
+    set_flag(c, FLAG_C, cr & 0x80); \
+    set_flag(c, FLAG_A, !(cr & 0x08)); \
 } while (0);
 
 
@@ -415,38 +425,38 @@ void cpu_step(cpu_t *c) {
         case 0x7d: MOV_RR(A, L);                        break; // MOV A, L
         case 0x7e: MOV_RM(A);                           break; // MOV A, M
         case 0x7f: MOV_RR(A, A);                        break; // MOV A, A
-        case 0x80: ADD(c->B);                           break; // ADD B
-        case 0x81: ADD(c->C);                           break; // ADD C
-        case 0x82: ADD(c->D);                           break; // ADD D
-        case 0x83: ADD(c->E);                           break; // ADD E
-        case 0x84: ADD(c->H);                           break; // ADD H
-        case 0x85: ADD(c->L);                           break; // ADD L
-        case 0x86: ADD(load(c, HL));                    break; // ADD M
-        case 0x87: ADD(c->A);                           break; // ADD A
-        case 0x88: NIMPL;                               break; //
-        case 0x89: NIMPL;                               break; //
-        case 0x8a: NIMPL;                               break; //
-        case 0x8b: NIMPL;                               break; //
-        case 0x8c: NIMPL;                               break; //
-        case 0x8d: NIMPL;                               break; //
-        case 0x8e: NIMPL;                               break; //
-        case 0x8f: NIMPL;                               break; //
-        case 0x90: NIMPL;                               break; //
-        case 0x91: NIMPL;                               break; //
-        case 0x92: NIMPL;                               break; //
-        case 0x93: NIMPL;                               break; //
-        case 0x94: NIMPL;                               break; //
-        case 0x95: NIMPL;                               break; //
-        case 0x96: NIMPL;                               break; //
-        case 0x97: NIMPL;                               break; //
-        case 0x98: NIMPL;                               break; //
-        case 0x99: NIMPL;                               break; //
-        case 0x9a: NIMPL;                               break; //
-        case 0x9b: NIMPL;                               break; //
-        case 0x9c: NIMPL;                               break; //
-        case 0x9d: NIMPL;                               break; //
-        case 0x9e: NIMPL;                               break; //
-        case 0x9f: NIMPL;                               break; //
+        case 0x80: ADC(c->B, 0);                        break; // ADD B
+        case 0x81: ADC(c->C, 0);                        break; // ADD C
+        case 0x82: ADC(c->D, 0);                        break; // ADD D
+        case 0x83: ADC(c->E, 0);                        break; // ADD E
+        case 0x84: ADC(c->H, 0);                        break; // ADD H
+        case 0x85: ADC(c->L, 0);                        break; // ADD L
+        case 0x86: ADC(load(c, HL), 0);                 break; // ADD M
+        case 0x87: ADC(c->A, 0);                        break; // ADD A
+        case 0x88: ADC(c->B, 1);                        break; // ADC B
+        case 0x89: ADC(c->C, 1);                        break; // ADC C
+        case 0x8a: ADC(c->D, 1);                        break; // ADC D
+        case 0x8b: ADC(c->E, 1);                        break; // ADC E
+        case 0x8c: ADC(c->H, 1);                        break; // ADC H
+        case 0x8d: ADC(c->L, 1);                        break; // ADC L
+        case 0x8e: ADC(load(c, HL), 1);                 break; // ADC M
+        case 0x8f: ADC(c->A, 1);                        break; // ADC A
+        case 0x90: SBB(c->B, 0);                        break; // SUB B
+        case 0x91: SBB(c->C, 0);                        break; // SUB C
+        case 0x92: SBB(c->D, 0);                        break; // SUB D
+        case 0x93: SBB(c->E, 0);                        break; // SUB E
+        case 0x94: SBB(c->H, 0);                        break; // SUB H
+        case 0x95: SBB(c->L, 0);                        break; // SUB L
+        case 0x96: SBB(load(c, HL), 0);                 break; // SUB M
+        case 0x97: SBB(c->A, 0);                        break; // SUB A
+        case 0x98: SBB(c->B, 1);                        break; // SBB B
+        case 0x99: SBB(c->C, 1);                        break; // SBB C
+        case 0x9a: SBB(c->D, 1);                        break; // SBB D
+        case 0x9b: SBB(c->E, 1);                        break; // SBB E
+        case 0x9c: SBB(c->H, 1);                        break; // SBB H
+        case 0x9d: SBB(c->L, 1);                        break; // SBB L
+        case 0x9e: SBB(load(c, HL), 1);                 break; // SBB M
+        case 0x9f: SBB(c->A, 1);                        break; // SBB A
         case 0xa0: BITWIZE(&, c->B);                    break; // ANA B
         case 0xa1: BITWIZE(&, c->C);                    break; // ANA C
         case 0xa2: BITWIZE(&, c->D);                    break; // ANA D
@@ -485,7 +495,7 @@ void cpu_step(cpu_t *c) {
         case 0xc3: JMP(true);                           break; // JMP a16
         case 0xc4: NIMPL;                               break; //
         case 0xc5: PUSH(B, C);                          break; // PUSH B
-        case 0xc6: ADD(fetch(c));                       break; // ADI d8
+        case 0xc6: ADC(fetch(c), 0);                    break; // ADI d8
         case 0xc7: NIMPL;                               break; //
         case 0xc8: NIMPL;                               break; //
         case 0xc9: NIMPL;                               break; //
@@ -493,7 +503,7 @@ void cpu_step(cpu_t *c) {
         case 0xcb: NIMPL;                               break; //
         case 0xcc: NIMPL;                               break; //
         case 0xcd: NIMPL;                               break; //
-        case 0xce: NIMPL;                               break; //
+        case 0xce: ADC(fetch(c), 1);                    break; // ACI d8
         case 0xcf: NIMPL;                               break; //
         case 0xd0: NIMPL;                               break; //
         case 0xd1: POP(D, E);                           break; // POP D
@@ -501,7 +511,7 @@ void cpu_step(cpu_t *c) {
         case 0xd3: NIMPL;                               break; //
         case 0xd4: NIMPL;                               break; //
         case 0xd5: PUSH(D, E);                          break; // PUSH D
-        case 0xd6: NIMPL;                               break; //
+        case 0xd6: SBB(fetch(c), 0);                    break; // SUI d8
         case 0xd7: NIMPL;                               break; //
         case 0xd8: NIMPL;                               break; //
         case 0xd9: NIMPL;                               break; //
@@ -509,7 +519,7 @@ void cpu_step(cpu_t *c) {
         case 0xdb: NIMPL;                               break; //
         case 0xdc: NIMPL;                               break; //
         case 0xdd: NIMPL;                               break; //
-        case 0xde: NIMPL;                               break; //
+        case 0xde: SBB(fetch(c), 1);                    break; // SBI d8
         case 0xdf: NIMPL;                               break; //
         case 0xe0: NIMPL;                               break; //
         case 0xe1: POP(H, L);                           break; // POP H
