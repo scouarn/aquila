@@ -6,7 +6,6 @@
 
 #define NIMPL assert(0 && "Not implemented")
 
-
 // https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
 // http://dunfield.classiccmp.org/r/8080.txt
 
@@ -27,21 +26,8 @@ void cpu_dump(cpu_t *c, FILE *fp) {
     fprintf(fp, "SP: %04x\n", c->SP);
 }
 
-static data_t load(cpu_t *c, addr_t addr) {
-    *c->addr_bus = addr;
-    *c->data_bus = c->ram[addr];
-    return *c->data_bus;
-}
-
-static void store(cpu_t *c, addr_t addr, data_t data) {
-    *c->addr_bus  = addr;
-    *c->data_bus  = data;
-     c->ram[addr] = data;
-    return;
-}
-
 static data_t fetch(cpu_t *c) {
-    return load(c, c->PC++);
+    return c->load(c->PC++);
 }
 
 static addr_t fetch_addr(cpu_t *c) {
@@ -84,33 +70,33 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     c->DST = c->SRC;
 
 #define MOV_MR(SRC) \
-    store(c, HL, c->SRC);
+    c->store(HL, c->SRC);
 
 #define MOV_RM(DEST) \
-    c->DEST = load(c, HL);
+    c->DEST = c->load(HL);
 
 #define STAX(HI, LO) \
-    store(c, WORD(HI, LO), c->A);
+    c->store(WORD(HI, LO), c->A);
 
 #define STA() \
-    store(c, fetch_addr(c), c->A);
+    c->store(fetch_addr(c), c->A);
 
 #define LDAX(HI, LO) \
-    c->A = load(c, WORD(HI, LO));
+    c->A = c->load(WORD(HI, LO));
 
 #define LDA() \
-    c->A = load(c, fetch_addr(c));
+    c->A = c->load(fetch_addr(c));
 
 #define SHLD() do {                 \
     addr_t addr = fetch_addr(c);    \
-    store(c, addr,   c->L);         \
-    store(c, addr+1, c->H);         \
+    c->store(addr,   c->L);         \
+    c->store(addr+1, c->H);         \
 } while (0);
 
 #define LHLD() do {                 \
     addr_t addr = fetch_addr(c);    \
-    c->L = load(c, addr);           \
-    c->H = load(c, addr+1);         \
+    c->L = c->load(addr);           \
+    c->H = c->load(addr+1);         \
 } while (0);
 
 #define MVI(DST) \
@@ -118,7 +104,7 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 
 #define MVI_M() do {                \
     data_t data = fetch(c);         \
-    store(c, HL, data);             \
+    c->store(HL, data);             \
 } while (0);
 
 #define LXI(HI, LO) do {            \
@@ -143,20 +129,20 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 #define XTHL() do {                 \
     data_t hi = c->H;               \
     data_t lo = c->L;               \
-    c->L = load(c, c->SP++);        \
-    c->H = load(c, c->SP++);        \
-    store(c, --c->SP, hi);          \
-    store(c, --c->SP, lo);          \
+    c->L = c->load(c->SP++);     \
+    c->H = c->load(c->SP++);     \
+    c->store(--c->SP, hi);          \
+    c->store(--c->SP, lo);          \
 } while (0);
 
 #define PUSH(HI, LO) do {           \
-    store(c, --c->SP, c->HI);       \
-    store(c, --c->SP, c->LO);       \
+    c->store(--c->SP, c->HI);       \
+    c->store(--c->SP, c->LO);       \
 } while (0);
 
 #define POP(HI, LO) do {            \
-    c->LO = load(c, c->SP++);       \
-    c->HI = load(c, c->SP++);       \
+    c->LO = c->load(c->SP++);       \
+    c->HI = c->load(c->SP++);       \
 } while (0);
 
 #define POP_PSW() do {              \
@@ -349,8 +335,8 @@ void cpu_step(cpu_t *c) {
         case 0x31: LXI_SP();                            break; // LXI SP, d16
         case 0x32: STA();                               break; // STA a16
         case 0x33: c->SP++;                             break; // INX SP
-        case 0x34: store(c, HL, inc8(c, load(c, HL),  1)); break; // INR M
-        case 0x35: store(c, HL, inc8(c, load(c, HL), -1)); break; // DCR M
+        case 0x34: c->store(HL, inc8(c, c->load(HL),  1)); break; // INR M
+        case 0x35: c->store(HL, inc8(c, c->load(HL), -1)); break; // DCR M
         case 0x36: MVI_M();                             break; // MVI M, d8
         case 0x37: c->FL |= 0x01;                       break; // STC
         case 0x38: NOP();                               break; // NOP
@@ -431,7 +417,7 @@ void cpu_step(cpu_t *c) {
         case 0x83: ADC(c->E, 0);                        break; // ADD E
         case 0x84: ADC(c->H, 0);                        break; // ADD H
         case 0x85: ADC(c->L, 0);                        break; // ADD L
-        case 0x86: ADC(load(c, HL), 0);                 break; // ADD M
+        case 0x86: ADC(c->load(HL), 0);                 break; // ADD M
         case 0x87: ADC(c->A, 0);                        break; // ADD A
         case 0x88: ADC(c->B, 1);                        break; // ADC B
         case 0x89: ADC(c->C, 1);                        break; // ADC C
@@ -439,7 +425,7 @@ void cpu_step(cpu_t *c) {
         case 0x8b: ADC(c->E, 1);                        break; // ADC E
         case 0x8c: ADC(c->H, 1);                        break; // ADC H
         case 0x8d: ADC(c->L, 1);                        break; // ADC L
-        case 0x8e: ADC(load(c, HL), 1);                 break; // ADC M
+        case 0x8e: ADC(c->load(HL), 1);                 break; // ADC M
         case 0x8f: ADC(c->A, 1);                        break; // ADC A
         case 0x90: SBB(c->B, 0);                        break; // SUB B
         case 0x91: SBB(c->C, 0);                        break; // SUB C
@@ -447,7 +433,7 @@ void cpu_step(cpu_t *c) {
         case 0x93: SBB(c->E, 0);                        break; // SUB E
         case 0x94: SBB(c->H, 0);                        break; // SUB H
         case 0x95: SBB(c->L, 0);                        break; // SUB L
-        case 0x96: SBB(load(c, HL), 0);                 break; // SUB M
+        case 0x96: SBB(c->load(HL), 0);                 break; // SUB M
         case 0x97: SBB(c->A, 0);                        break; // SUB A
         case 0x98: SBB(c->B, 1);                        break; // SBB B
         case 0x99: SBB(c->C, 1);                        break; // SBB C
@@ -455,7 +441,7 @@ void cpu_step(cpu_t *c) {
         case 0x9b: SBB(c->E, 1);                        break; // SBB E
         case 0x9c: SBB(c->H, 1);                        break; // SBB H
         case 0x9d: SBB(c->L, 1);                        break; // SBB L
-        case 0x9e: SBB(load(c, HL), 1);                 break; // SBB M
+        case 0x9e: SBB(c->load(HL), 1);                 break; // SBB M
         case 0x9f: SBB(c->A, 1);                        break; // SBB A
         case 0xa0: BITWIZE(&, c->B);                    break; // ANA B
         case 0xa1: BITWIZE(&, c->C);                    break; // ANA C
@@ -463,7 +449,7 @@ void cpu_step(cpu_t *c) {
         case 0xa3: BITWIZE(&, c->E);                    break; // ANA E
         case 0xa4: BITWIZE(&, c->H);                    break; // ANA H
         case 0xa5: BITWIZE(&, c->L);                    break; // ANA L
-        case 0xa6: BITWIZE(&, load(c, HL));             break; // ANA M
+        case 0xa6: BITWIZE(&, c->load(HL));             break; // ANA M
         case 0xa7: BITWIZE(&, c->A);                    break; // ANA A
         case 0xa8: BITWIZE(^, c->B);                    break; // XRA B
         case 0xa9: BITWIZE(^, c->C);                    break; // XRA C
@@ -471,7 +457,7 @@ void cpu_step(cpu_t *c) {
         case 0xab: BITWIZE(^, c->E);                    break; // XRA E
         case 0xac: BITWIZE(^, c->H);                    break; // XRA H
         case 0xad: BITWIZE(^, c->L);                    break; // XRA L
-        case 0xae: BITWIZE(^, load(c, HL));             break; // XRA M
+        case 0xae: BITWIZE(^, c->load(HL));             break; // XRA M
         case 0xaf: BITWIZE(^, c->A);                    break; // XRA A
         case 0xb0: BITWIZE(|, c->B);                    break; // ORA B
         case 0xb1: BITWIZE(|, c->C);                    break; // ORA C
@@ -479,7 +465,7 @@ void cpu_step(cpu_t *c) {
         case 0xb3: BITWIZE(|, c->E);                    break; // ORA E
         case 0xb4: BITWIZE(|, c->H);                    break; // ORA H
         case 0xb5: BITWIZE(|, c->L);                    break; // ORA L
-        case 0xb6: BITWIZE(|, load(c, HL));             break; // ORA M
+        case 0xb6: BITWIZE(|, c->load(HL));             break; // ORA M
         case 0xb7: BITWIZE(|, c->A);                    break; // ORA A
         case 0xb8: NIMPL;                               break; //
         case 0xb9: NIMPL;                               break; //

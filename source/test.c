@@ -14,9 +14,7 @@
     printf("Testing %-10s", X);             \
     fflush(stdout);                         \
     cpu_reset(&cpu);                        \
-    memset(ram, 0, RAM_SIZE);               \
-    data_bus = 0;                           \
-    addr_bus = 0;
+    memset(ram, 0, RAM_SIZE);
 
 #define TEST_END \
     printf("\033[32mOK\033[0m\n"); \
@@ -31,18 +29,33 @@
     if (REG != VAL) { TEST_FAIL(#REG " is $%02x instead of $%02x", REG, VAL); }
 
 
+static cpu_t cpu;
+static data_t ram[RAM_SIZE];
+
+static data_t load(addr_t addr) {
+    return ram[addr];
+}
+
+static void store(addr_t addr, data_t data) {
+    ram[addr] = data;
+}
+
+static data_t input(port_t port) {
+    return ram[port];
+}
+
+static void output(port_t port, data_t data) {
+    ram[port] = data;
+}
+
+
 int main(void) {
 
-    /* Init mem */
-    data_t ram[RAM_SIZE];
-    data_t data_bus;
-    addr_t addr_bus;
-
     /* Init CPU */
-    cpu_t cpu;
-    cpu.ram = ram;
-    cpu.data_bus = &data_bus;
-    cpu.addr_bus = &addr_bus;
+    cpu.load   = load;
+    cpu.store  = store;
+    cpu.input  = input;
+    cpu.output = output;
 
     TEST_BEGIN("MOV"); // TODO: more tests for these instructions
         LOAD(

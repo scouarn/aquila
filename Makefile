@@ -10,7 +10,7 @@ all : $(MODULES)
 main : machine
 
 run : source
-	rlwrap bin/source/main
+	rlwrap bin/source/sim
 
 test: source
 	bin/source/test

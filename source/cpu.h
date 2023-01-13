@@ -9,6 +9,7 @@
 
 typedef uint16_t addr_t;
 typedef uint8_t  data_t;
+typedef uint8_t  port_t;
 
 /* State of a 8080 CPU */
 typedef struct cpu_t {
@@ -24,10 +25,11 @@ typedef struct cpu_t {
 
     bool halted, interrupted, interrupt_enabled;
 
-    /* Memory */
-    data_t *ram;
-    addr_t *addr_bus;
-    data_t *data_bus;
+    /* Memory and IO */
+    void   (*store)  (addr_t, data_t);
+    void   (*output) (port_t, data_t);
+    data_t (*load)   (addr_t);
+    data_t (*input)  (port_t);
 
 } cpu_t;
 

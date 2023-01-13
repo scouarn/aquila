@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 #include "machine.h"
@@ -6,10 +7,6 @@
 void mac_init(mac_t *m) {
     mac_reset(m);
     memset(m->ram, 0, RAM_SIZE * sizeof(data_t));
-
-    m->cpu.ram      =  m->ram;
-    m->cpu.addr_bus = &m->addr_bus;
-    m->cpu.data_bus = &m->data_bus;
 }
 
 void mac_reset(mac_t *m) {

@@ -6,9 +6,44 @@
 #include <assert.h>
 #include <signal.h>
 
-#include "machine.h"
+#include "cpu.h"
 
-static mac_t mac;
+
+/* Defining the machine */
+static cpu_t  cpu;
+static data_t ram[RAM_SIZE];
+static addr_t addr_bus, addr_reg;
+static data_t data_bus, data_reg;
+
+static data_t load(addr_t addr) {
+    addr_bus = addr;
+    data_bus = ram[addr];
+    return data_bus;
+}
+
+static void store(addr_t addr, data_t data) {
+    addr_bus  = addr;
+    data_bus  = data;
+    ram[addr] = data;
+}
+
+static data_t input(port_t port) {
+    return ram[port];
+}
+
+static void output(port_t port, data_t data) {
+    ram[port] = data;
+}
+
+static void print(void) {
+    printf("Data: $%02hx\n", data_bus);
+    printf("Addr: $%04hx\n", addr_bus);
+}
+
+static void prompt(void) {
+    printf("aquila> ");
+    fflush(stdout);
+}
 
 /* Help message */
 static const char HELP[] =
@@ -26,18 +61,7 @@ static const char HELP[] =
     "    reg            : display registers\n"
 ;
 
-static void print(void) {
-    printf("Data: $%02hx\n", mac.data_bus);
-    printf("Addr: $%04hx\n", mac.addr_bus);
-}
-
-static void prompt(void) {
-    printf("aquila> ");
-    fflush(stdout);
-}
-
-
-/* Status */
+/* Catch SIGINT when running */
 static volatile bool running = false;
 static void run_interrupt(int sig) {
     (void)sig;
@@ -58,7 +82,11 @@ int main(void) {
     const char sep[] = " \n";
 
     /* Init machine */
-    mac_init(&mac);
+    cpu.load   = load;
+    cpu.store  = store;
+    cpu.input  = input;
+    cpu.output = output;
+    memset(ram, 0, RAM_SIZE);
     signal(SIGINT, run_interrupt);
 
     while (1) {
@@ -96,58 +124,61 @@ int main(void) {
 
         /* Examine */
         else if (strcmp("ex", tok) == 0) {
-            addr_t addr;
 
             tok = strtok(NULL, sep);
-            if (tok == NULL || sscanf(tok, "%hx", &addr) != 1) {
+            if (tok == NULL || sscanf(tok, "%hx", &addr_reg) != 1) {
                 printf("Expected ADDR\n");
                 continue;
             }
 
-            mac_ex(&mac, addr);
+            addr_bus = addr_reg;
+            data_bus = ram[addr_bus];
             print();
         }
 
         /* Examine next */
         else if (strcmp("exn",    tok) == 0
               || strcmp("exnext", tok) == 0) {
-            mac_ex_next(&mac);
+            addr_bus = ++addr_reg;
+            data_bus = ram[addr_bus];
             print();
         }
 
         /* Deposit */
         else if (strcmp("dep", tok) == 0) {
-            data_t data;
 
             tok = strtok(NULL, sep);
-            if (tok == NULL || sscanf(tok, "%hhx", &data) != 1) {
+            if (tok == NULL || sscanf(tok, "%hhx", &data_reg) != 1) {
                 printf("Expected DATA\n");
                 continue;
             }
 
-            mac_dep(&mac, data);
+            addr_bus = addr_reg;
+            data_bus = data_reg;
+            ram[addr_bus] = data_bus;
             print();
         }
 
         /* Deposit next */
         else if (strcmp("depn",    tok) == 0
               || strcmp("depnext", tok) == 0) {
-            data_t data;
 
             tok = strtok(NULL, sep);
-            if (tok == NULL || sscanf(tok, "%hhx", &data) != 1) {
+            if (tok == NULL || sscanf(tok, "%hhx", &data_reg) != 1) {
                 printf("Expected DATA\n");
                 continue;
             }
 
-            mac_dep_next(&mac, data);
+            addr_bus = ++addr_reg;
+            data_bus = data_reg;
+            ram[addr_bus] = data_bus;
             print();
         }
 
         /* Step */
         else if (strcmp("s",    tok) == 0
               || strcmp("step", tok) == 0) {
-            mac_step(&mac);
+            cpu_step(&cpu);
             print();
         }
 
@@ -155,24 +186,25 @@ int main(void) {
         else if (strcmp("run", tok) == 0) {
             running = true;
             while (running) {
-                mac_step(&mac);
+                cpu_step(&cpu);
             }
             print();
         }
 
         /* Reset */
         else if (strcmp("reset", tok) == 0) {
-            mac_reset(&mac);
+            cpu_reset(&cpu);
         }
 
         /* Hard reset */
         else if (strcmp("reboot", tok) == 0) {
-            mac_init(&mac);
+            cpu_reset(&cpu);
+            memset(ram, 0, sizeof(ram));
         }
 
         /* Display registers */
         else if (strcmp("reg", tok) == 0) {
-            cpu_dump(&mac.cpu, stdout);
+            cpu_dump(&cpu, stdout);
         }
 
         /* Error */
