@@ -58,6 +58,17 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     set_flag(c, FLAG_P, p % 2 == 0);
 }
 
+static void push_word(cpu_t *c, addr_t word) {
+    c->store(--c->SP, (word >> 8) & 0xff);
+    c->store(--c->SP, word & 0xff);
+}
+
+static addr_t pop_word(cpu_t *c) {
+    data_t hi = c->load(c->SP++);
+    data_t lo = c->load(c->SP++);
+    return (hi << 8) | lo;
+}
+
 #define WORD(HI, LO) ((c->HI << 8) | c->LO)
 #define BC  WORD(B, C)
 #define DE  WORD(D, E)
@@ -135,14 +146,13 @@ static void update_ZSP(cpu_t *c, data_t reg) {
     c->store(--c->SP, lo);          \
 } while (0);
 
-#define PUSH(HI, LO) do {           \
-    c->store(--c->SP, c->HI);       \
-    c->store(--c->SP, c->LO);       \
-} while (0);
+#define PUSH(HI, LO) \
+    push_word(c, WORD(HI, LO))
 
 #define POP(HI, LO) do {            \
-    c->LO = c->load(c->SP++);       \
-    c->HI = c->load(c->SP++);       \
+    addr_t word = pop_word(c);      \
+    c->LO = (word >> 8) | 0xff;     \
+    c->HI = word & 0xff;            \
 } while (0);
 
 #define POP_PSW() do {              \
@@ -160,17 +170,33 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 #define COND_PO  (!COND_PE)
 #define COND_P   (!COND_M)
 
-// TODO: figure out if the address is always fetched
+// TODO: figure out if the addresses are always fetched
 #define JMP(COND) do {              \
     addr_t addr = fetch_addr(c);    \
-    if (COND) c->PC = addr;         \
+    if (!(COND)) break;             \
+    c->PC = addr;                   \
 } while (0)
 
-#if 0
-#define JMP(COND) do {              \
-    if (COND) c->PC = fetch_addr(c);\
+#define CALL(COND) do {             \
+    addr_t addr = fetch_addr(c);    \
+    if (!(COND)) break;             \
+    c->store(--c->SP, (c->PC >> 8) & 0xff);\
+    c->store(--c->SP, c->PC & 0xff);\
+    c->PC = addr;                   \
 } while (0)
-#endif
+
+#define RET(COND) do {              \
+    if (!(COND)) break;             \
+    data_t hi = c->load(c->SP++);   \
+    data_t lo = c->load(c->SP++);   \
+    c->PC = (hi << 8) | lo;         \
+} while (0)
+
+#define RST(N) do {                 \
+    c->store(--c->SP, (c->PC >> 8) & 0xff);\
+    c->store(--c->SP, c->PC & 0xff);\
+    c->PC = N << 3;                 \
+} while (0)
 
 #define INC16(HI, LO, INC) do {     \
     addr_t res = WORD(HI, LO) + (INC);\
@@ -269,6 +295,7 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_C, cr & 0x80); \
     set_flag(c, FLAG_A, !(cr & 0x08)); \
 } while (0);
+
 
 
 void cpu_step(cpu_t *c) {
@@ -475,70 +502,70 @@ void cpu_step(cpu_t *c) {
         case 0xbd: NIMPL;                               break; //
         case 0xbe: NIMPL;                               break; //
         case 0xbf: NIMPL;                               break; //
-        case 0xc0: NIMPL;                               break; //
+        case 0xc0: RET(COND_NZ);                        break; // RNZ
         case 0xc1: POP(B, C);                           break; // POP B
         case 0xc2: JMP(COND_NZ);                        break; // JNZ a16
         case 0xc3: JMP(true);                           break; // JMP a16
-        case 0xc4: NIMPL;                               break; //
+        case 0xc4: CALL(COND_NZ);                       break; // CNZ a16
         case 0xc5: PUSH(B, C);                          break; // PUSH B
         case 0xc6: ADC(fetch(c), 0);                    break; // ADI d8
-        case 0xc7: NIMPL;                               break; //
-        case 0xc8: NIMPL;                               break; //
-        case 0xc9: NIMPL;                               break; //
+        case 0xc7: RST(0);                              break; // RST 0
+        case 0xc8: RET(COND_Z);                         break; // RZ
+        case 0xc9: RET(true);                           break; // RET
         case 0xca: JMP(COND_Z);                         break; // JZ a16
-        case 0xcb: NIMPL;                               break; //
-        case 0xcc: NIMPL;                               break; //
-        case 0xcd: NIMPL;                               break; //
+        case 0xcb: JMP(true);                           break; // *JMP a16
+        case 0xcc: CALL(COND_Z);                        break; // CZ a16
+        case 0xcd: CALL(true);                          break; // CALL a16
         case 0xce: ADC(fetch(c), 1);                    break; // ACI d8
-        case 0xcf: NIMPL;                               break; //
-        case 0xd0: NIMPL;                               break; //
+        case 0xcf: RST(1);                              break; // RST 1
+        case 0xd0: RET(COND_NC);                        break; // RNC
         case 0xd1: POP(D, E);                           break; // POP D
         case 0xd2: JMP(COND_NC);                        break; // JNC a16
         case 0xd3: c->output(fetch(c), c->A);           break; // OUT p8
-        case 0xd4: NIMPL;                               break; //
+        case 0xd4: CALL(COND_NC);                       break; // CNC a16
         case 0xd5: PUSH(D, E);                          break; // PUSH D
         case 0xd6: SBB(fetch(c), 0);                    break; // SUI d8
-        case 0xd7: NIMPL;                               break; //
-        case 0xd8: NIMPL;                               break; //
-        case 0xd9: NIMPL;                               break; //
+        case 0xd7: RST(2);                              break; // RST 2
+        case 0xd8: RET(COND_C);                         break; // RC
+        case 0xd9: RET(true);                           break; // *RET
         case 0xda: JMP(COND_C);                         break; // JC a16
         case 0xdb: c->A = c->input(fetch(c));           break; // IN p8
-        case 0xdc: NIMPL;                               break; //
-        case 0xdd: NIMPL;                               break; //
+        case 0xdc: CALL(COND_C);                        break; // CC a16
+        case 0xdd: CALL(true);                          break; // *CALL a16
         case 0xde: SBB(fetch(c), 1);                    break; // SBI d8
-        case 0xdf: NIMPL;                               break; //
-        case 0xe0: NIMPL;                               break; //
+        case 0xdf: RST(3);                              break; // RST 3
+        case 0xe0: RET(COND_PO);                        break; // RPO
         case 0xe1: POP(H, L);                           break; // POP H
         case 0xe2: JMP(COND_PO);                        break; // JPO a16
         case 0xe3: XTHL();                              break; // XTHL
-        case 0xe4: NIMPL;                               break; //
+        case 0xe4: CALL(COND_PO);                       break; // CPO a16
         case 0xe5: PUSH(H, L);                          break; // PUSH H
         case 0xe6: BITWIZE(&, fetch(c));                break; // ANI d8
-        case 0xe7: NIMPL;                               break; //
-        case 0xe8: NIMPL;                               break; //
-        case 0xe9: NIMPL;                               break; //
+        case 0xe7: RST(4);                              break; // RST 4
+        case 0xe8: RET(COND_PE);                        break; // RPE
+        case 0xe9: c->PC = HL;                          break; // PCHL
         case 0xea: JMP(COND_PE);                        break; // JPE a16
         case 0xeb: XCHG();                              break; // XCHG
-        case 0xec: NIMPL;                               break; //
-        case 0xed: NIMPL;                               break; //
+        case 0xec: CALL(COND_PE);                       break; // CPE a16
+        case 0xed: CALL(true);                          break; // *CALL a16
         case 0xee: BITWIZE(^, fetch(c));                break; // XRI d8
-        case 0xef: NIMPL;                               break; //
-        case 0xf0: NIMPL;                               break; //
+        case 0xef: RST(5);                              break; // RST 5
+        case 0xf0: RET(COND_P);                         break; // RP
         case 0xf1: POP_PSW();                           break; // POP PSW
         case 0xf2: JMP(COND_P);                         break; // JP a16
         case 0xf3: c->interrupt_enabled = false;        break; // DI
-        case 0xf4: NIMPL;                               break; //
+        case 0xf4: CALL(COND_P);                        break; // CP a16
         case 0xf5: PUSH(A, FL);                         break; // PUSH PSW
         case 0xf6: BITWIZE(|, fetch(c));                break; // ORI d8
-        case 0xf7: NIMPL;                               break; //
-        case 0xf8: NIMPL;                               break; //
+        case 0xf7: RST(6);                              break; // RST 6
+        case 0xf8: RET(COND_M);                         break; // RM
         case 0xf9: c->SP = HL;                          break; // SPHL
         case 0xfa: JMP(COND_M);                         break; // JM a16
         case 0xfb: c->interrupt_enabled = true;         break; // EI
-        case 0xfc: NIMPL;                               break; //
-        case 0xfd: NIMPL;                               break; //
+        case 0xfc: CALL(COND_M);                        break; // CM a16
+        case 0xfd: CALL(true);                          break; // *CALL a16
         case 0xfe: NIMPL;                               break; //
-        case 0xff: NIMPL;                               break; //
+        case 0xff: RST(7);                              break; // RST 7
         default:   NIMPL;                               break; //
     }
 
