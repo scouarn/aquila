@@ -23,8 +23,12 @@
 } while(0)
 
 #define TEST_FAIL(REASON, ...) \
-    printf("\033[31mFAIL\033[0m: " REASON "\n" __VA_OPT__(,) __VA_ARGS__); \
+    printf("\033[31mFAIL\033[0m: " REASON " at line %d\n", __VA_ARGS__ __VA_OPT__(,) __LINE__); \
+    cpu_dump(&cpu, stdout); \
     break
+
+#define TEST_ASSERT_EQ(REG, VAL) \
+    if (REG != VAL) { TEST_FAIL(#REG " is $%02x instead of $%02x", REG, VAL); }
 
 int main(void) {
 
@@ -1153,5 +1157,57 @@ int main(void) {
 
     TEST_END;
 
+    TEST_BEGIN("ADD"); // TODO: test flags
+        LOAD(
+            0x80,       // 00: ADD B
+            0x81,       // 01: ADD C
+            0x82,       // 02: ADD D
+            0x83,       // 03: ADD E
+            0x84,       // 04: ADD H
+            0x85,       // 05: ADD L
+            0x86,       // 06: ADD M
+            0x87,       // 07: ADD A
+            0xc6, 0x5a, // 08: ADI $5a
+        );
+
+        cpu.A = 0x00; cpu.B = 0x00;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x00);
+
+        cpu.A = 0x10; cpu.C = 0x00;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x10);
+
+        cpu.A = 0x55; cpu.D = 0xaa;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0xff);
+
+        cpu.A = 0xff; cpu.E = 0x0f;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x0e);
+
+        cpu.A = 0xf0; cpu.H = 0xf1;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0xe1);
+
+        cpu.A = 0x33; cpu.L = 0xf2;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x25);
+
+        cpu.A = 0xaa;
+        cpu.H = 0x40; cpu.L = 0x00;
+        ram[0x4000] = 0xdd;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x87);
+
+        cpu.A = 0xcc;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x98);
+
+        cpu.A = 0x41;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A, 0x9b);
+
+    TEST_END;
 
 }

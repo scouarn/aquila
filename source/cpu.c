@@ -80,9 +80,6 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 
 #define NOP() do { } while (0)
 
-#define HALT() \
-    c->halted = true;
-
 #define MOV_RR(DST, SRC) \
     c->DST = c->SRC;
 
@@ -190,13 +187,13 @@ static void update_ZSP(cpu_t *c, data_t reg) {
 #endif
 
 #define INC16(HI, LO, INC) do {     \
-    addr_t res = WORD(HI, LO) + INC;\
+    addr_t res = WORD(HI, LO) + (INC);\
     c->HI = res >> 8;               \
     c->LO = res & 0xff;             \
 } while (0)
 
 #define DAD(RP) do {                \
-    uint32_t res = RP + HL;         \
+    uint32_t res = (RP) + HL;       \
     c->H = (res >> 8) & 0xff;       \
     c->L = res & 0xff;              \
     set_flag(c, FLAG_C, res > 0xffff);\
@@ -262,9 +259,19 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
 }
 
 #define BITWIZE(OP, DATA) do {      \
-    c->A = c->A OP DATA;            \
+    c->A = c->A OP (DATA);          \
     update_ZSP(c, c->A);            \
     set_flag(c, FLAG_C, 0);         \
+} while (0);
+
+#define ADD(DATA) do {              \
+    data_t data = DATA;             \
+    int hc = data & c->A & 0x08;    \
+    int cr = data & c->A & 0x80;    \
+    c->A += data;                   \
+    update_ZSP(c, c->A);            \
+    set_flag(c, FLAG_C, hc);        \
+    set_flag(c, FLAG_A, cr);        \
 } while (0);
 
 
@@ -398,7 +405,7 @@ void cpu_step(cpu_t *c) {
         case 0x73: MOV_MR(E);                           break; // MOV M, E
         case 0x74: MOV_MR(H);                           break; // MOV M, H
         case 0x75: MOV_MR(L);                           break; // MOV M, L
-        case 0x76: HALT();                              break; // HLT
+        case 0x76: c->halted = true;                    break; // HLT
         case 0x77: MOV_MR(A);                           break; // MOV M, A
         case 0x78: MOV_RR(A, B);                        break; // MOV A, B
         case 0x79: MOV_RR(A, C);                        break; // MOV A, C
@@ -408,14 +415,14 @@ void cpu_step(cpu_t *c) {
         case 0x7d: MOV_RR(A, L);                        break; // MOV A, L
         case 0x7e: MOV_RM(A);                           break; // MOV A, M
         case 0x7f: MOV_RR(A, A);                        break; // MOV A, A
-        case 0x80: NIMPL;                               break; //
-        case 0x81: NIMPL;                               break; //
-        case 0x82: NIMPL;                               break; //
-        case 0x83: NIMPL;                               break; //
-        case 0x84: NIMPL;                               break; //
-        case 0x85: NIMPL;                               break; //
-        case 0x86: NIMPL;                               break; //
-        case 0x87: NIMPL;                               break; //
+        case 0x80: ADD(c->B);                           break; // ADD B
+        case 0x81: ADD(c->C);                           break; // ADD C
+        case 0x82: ADD(c->D);                           break; // ADD D
+        case 0x83: ADD(c->E);                           break; // ADD E
+        case 0x84: ADD(c->H);                           break; // ADD H
+        case 0x85: ADD(c->L);                           break; // ADD L
+        case 0x86: ADD(load(c, HL));                    break; // ADD M
+        case 0x87: ADD(c->A);                           break; // ADD A
         case 0x88: NIMPL;                               break; //
         case 0x89: NIMPL;                               break; //
         case 0x8a: NIMPL;                               break; //
@@ -478,7 +485,7 @@ void cpu_step(cpu_t *c) {
         case 0xc3: JMP(true);                           break; // JMP a16
         case 0xc4: NIMPL;                               break; //
         case 0xc5: PUSH(B, C);                          break; // PUSH B
-        case 0xc6: NIMPL;                               break; //
+        case 0xc6: ADD(fetch(c));                       break; // ADI d8
         case 0xc7: NIMPL;                               break; //
         case 0xc8: NIMPL;                               break; //
         case 0xc9: NIMPL;                               break; //
