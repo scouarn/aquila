@@ -275,35 +275,36 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     c->A = c->A OP (DATA);          \
     update_ZSP(c, c->A);            \
     set_flag(c, FLAG_C, 0);         \
+    set_flag(c, FLAG_A, 0);         \
 } while (0);
 
 #define ADC(DATA, CMASK) do {       \
-    data_t data = (DATA);           \
-    data_t res = c->A + data + (c->FL & CMASK);\
-    data_t cr = res ^ data ^ c->A;  \
+    data_t data = DATA;             \
+    uint16_t res = c->A + data + (c->FL & CMASK);\
+    uint16_t cr = res ^ data ^ c->A;\
     c->A = res;                     \
-    update_ZSP(c, c->A);            \
-    set_flag(c, FLAG_C, cr & 0x80); \
-    set_flag(c, FLAG_A, cr & 0x08); \
+    update_ZSP(c, res);             \
+    set_flag(c, FLAG_A, cr & 0x010);\
+    set_flag(c, FLAG_C, cr & 0x100);\
 } while (0);
 
 #define SBB(DATA, CMASK) do {       \
-    data_t data = ~(DATA);          \
-    data_t res = c->A + data + !(c->FL & CMASK);\
-    data_t cr = res ^ data ^ c->A;  \
+    data_t data = DATA;             \
+    uint16_t res = c->A + ~data + !(c->FL & CMASK);\
+    uint16_t cr = res ^ ~data ^ c->A;\
     c->A = res;                     \
-    update_ZSP(c, c->A);            \
-    set_flag(c, FLAG_C, cr & 0x80); \
-    set_flag(c, FLAG_A, !(cr & 0x08)); \
+    update_ZSP(c, res);             \
+    set_flag(c, FLAG_A, cr & 0x010);\
+    set_flag(c, FLAG_C,~cr & 0x100);\
 } while (0);
 
 #define CMP(DATA) do {              \
-    data_t data = ~(DATA);          \
-    data_t res = c->A + data;       \
-    data_t cr = res ^ data ^ c->A;  \
+    data_t data = DATA;             \
+    data_t res = c->A + ~data + 1;  \
+    data_t cr = res ^ ~data ^ c->A; \
     update_ZSP(c, res);             \
-    set_flag(c, FLAG_C, cr & 0x80); \
-    set_flag(c, FLAG_A, !(cr & 0x08)); \
+    set_flag(c, FLAG_A, cr & 0x08); \
+    set_flag(c, FLAG_C,~cr & 0x80); \
 } while (0);
 
 
@@ -573,7 +574,7 @@ void cpu_step(cpu_t *c) {
         case 0xfb: c->inte = true;                      break; // EI
         case 0xfc: CALL(COND_M);                        break; // CM a16
         case 0xfd: CALL(true);                          break; // *CALL a16
-        case 0xfe: CMP(fetch(c));                       break; // CMI d8
+        case 0xfe: CMP(fetch(c));                       break; // CPI d8
         case 0xff: RST(7);                              break; // RST 7
     }
 

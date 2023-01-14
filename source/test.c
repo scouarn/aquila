@@ -109,6 +109,7 @@ loop:   mov a, m
     }
 
     printf("\n\n==> Test done: %lu steps\n", cycle);
+    cpu_dump(&cpu, stdout);
 
     return 0;
 }
