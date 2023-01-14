@@ -9,10 +9,6 @@
 
 #define NIMPL assert(0 && "Not implemented")
 
-#define HI_BYTE(X) ((X >> 8) & 0xff)
-#define LO_BYTE(X) (X & 0xff)
-#define WORD(H, L) ((H << 8) | L)
-
 #define BC  WORD(c->B, c->C)
 #define DE  WORD(c->D, c->E)
 #define HL  WORD(c->H, c->L)
@@ -28,11 +24,22 @@
 #define COND_P   (!COND_M)
 
 void cpu_reset(cpu_t *c) {
-    c->FL = 2; // The bit which is always 1
+    c->FL |= 2;
+    c->FL &= 0xd7;
+    c->PC = 0;
+    c->hold = false;
+    c->inte = true;
+    c->interrupted = false;
+}
+
+void cpu_hard_reset(cpu_t *c) {
+    c->FL = 2;
+    c->PC = 0;
+    c->SP = 0xffff;
+    c->hold = false;
+    c->interrupted = false;
+    c->inte = true;
     c->A = c->B = c->C = c->D = c->E = c->H = c->L = 0;
-    c->PC = c->SP = 0;
-    c->halted = c->interrupted = false;
-    c->interrupt_enabled = true;
 }
 
 void cpu_dump(cpu_t *c, FILE *fp) {
@@ -165,7 +172,7 @@ static addr_t pop_word(cpu_t *c) {
 #define POP_PSW() do {              \
     POP(A, FL);                     \
     c->FL |= 2;                     \
-    c->FL &= ~(1 << 3);             \
+    c->FL &= 0xd7;                  \
 } while (0);
 
 // TODO: figure out if the addresses are always fetched
@@ -300,11 +307,10 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
 } while (0);
 
 
-
 void cpu_step(cpu_t *c) {
 
     /* Check if halted */
-    if (c->halted && !c->interrupted) {
+    if (c->hold && !c->interrupted) {
         return;
     }
 
@@ -431,7 +437,7 @@ void cpu_step(cpu_t *c) {
         case 0x73: MOV_MR(E);                           break; // MOV M, E
         case 0x74: MOV_MR(H);                           break; // MOV M, H
         case 0x75: MOV_MR(L);                           break; // MOV M, L
-        case 0x76: c->halted = true;                    break; // HLT
+        case 0x76: c->hold = true;                      break; // HLT
         case 0x77: MOV_MR(A);                           break; // MOV M, A
         case 0x78: MOV_RR(A, B);                        break; // MOV A, B
         case 0x79: MOV_RR(A, C);                        break; // MOV A, C
@@ -556,7 +562,7 @@ void cpu_step(cpu_t *c) {
         case 0xf0: RET(COND_P);                         break; // RP
         case 0xf1: POP_PSW();                           break; // POP PSW
         case 0xf2: JMP(COND_P);                         break; // JP a16
-        case 0xf3: c->interrupt_enabled = false;        break; // DI
+        case 0xf3: c->inte = false;                     break; // DI
         case 0xf4: CALL(COND_P);                        break; // CP a16
         case 0xf5: push_word(c, PSW);                   break; // PUSH PSW
         case 0xf6: BITWIZE(|, fetch(c));                break; // ORI d8
@@ -564,7 +570,7 @@ void cpu_step(cpu_t *c) {
         case 0xf8: RET(COND_M);                         break; // RM
         case 0xf9: c->SP = HL;                          break; // SPHL
         case 0xfa: JMP(COND_M);                         break; // JM a16
-        case 0xfb: c->interrupt_enabled = true;         break; // EI
+        case 0xfb: c->inte = true;                      break; // EI
         case 0xfc: CALL(COND_M);                        break; // CM a16
         case 0xfd: CALL(true);                          break; // *CALL a16
         case 0xfe: CMP(fetch(c));                       break; // CMI d8

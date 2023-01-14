@@ -7,6 +7,10 @@
 
 #define RAM_SIZE 0x10000
 
+#define HI_BYTE(X) ((X >> 8) & 0xff)
+#define LO_BYTE(X) (X & 0xff)
+#define WORD(H, L) ((H << 8) | L)
+
 typedef uint16_t addr_t;
 typedef uint8_t  data_t;
 typedef uint8_t  port_t;
@@ -23,7 +27,7 @@ typedef struct cpu_t {
     /* Program counter and stack pointer */
     addr_t PC, SP;
 
-    bool halted, interrupted, interrupt_enabled;
+    bool hold, inte, interrupted;
 
     /* Memory and IO */
     void   (*store)  (addr_t, data_t);
@@ -39,7 +43,13 @@ void cpu_dump(cpu_t *c, FILE *fp);
 /* One instruction */
 void cpu_step(cpu_t*);
 
-/* Reset registers */
+/* Only reset PC and hold/inte */
 void cpu_reset(cpu_t*);
+
+/* Set registers to 0 and SP to $ffff */
+void cpu_hard_reset(cpu_t*);
+
+/* Send itnerrupt signal */
+void cpu_interrupt(cpu_t*);
 
 #endif

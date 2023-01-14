@@ -15,6 +15,9 @@ run : source
 test: source
 	bin/source/test
 
+utest: source
+	bin/source/utest
+
 # Gen modules
 $(MODULES) :
 	@echo

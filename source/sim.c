@@ -57,7 +57,7 @@ static const char HELP[] =
     "    step           : step single instruction\n"
     "    run            : run until sigint (Ctrl+C) is received\n"
     "    reset          : reset CPU\n"
-    "    reboot         : reset CPU and RAM (power off then on)\n"
+    "    reboot         : hard reset CPU and RAM (power off then on)\n"
     "    reg            : display registers\n"
 ;
 
@@ -198,7 +198,7 @@ int main(void) {
 
         /* Hard reset */
         else if (strcmp("reboot", tok) == 0) {
-            cpu_reset(&cpu);
+            cpu_hard_reset(&cpu);
             memset(ram, 0, sizeof(ram));
         }
 
