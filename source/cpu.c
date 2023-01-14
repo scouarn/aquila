@@ -14,18 +14,24 @@
 #define HL  WORD(c->H, c->L)
 #define PSW WORD(c->A, c->FL)
 
-#define COND_Z   (c->FL & 0x40)
-#define COND_C   (c->FL & 0x01)
-#define COND_PE  (c->FL & 0x04)
-#define COND_M   (c->FL & 0x80)
+#define FLAG_C 0
+#define FLAG_P 2
+#define FLAG_A 4
+#define FLAG_Z 6
+#define FLAG_S 7
+
+#define COND_Z   (c->FL & (1 << FLAG_Z))
+#define COND_C   (c->FL & (1 << FLAG_C))
+#define COND_PE  (c->FL & (1 << FLAG_P))
+#define COND_M   (c->FL & (1 << FLAG_S))
 #define COND_NZ  (!COND_Z)
 #define COND_NC  (!COND_C)
 #define COND_PO  (!COND_PE)
 #define COND_P   (!COND_M)
 
 void cpu_reset(cpu_t *c) {
-    c->FL |= 2;
-    c->FL &= 0xd7;
+    c->FL |= 2;     // The bit which is always 1
+    c->FL &= 0xd7;  // The bits which are always 0
     c->PC = 0;
     c->hold = c->inte = false;
 }
@@ -39,31 +45,28 @@ void cpu_dump(cpu_t *c, FILE *fp) {
     fprintf(fp, "SP: %04x\n", c->SP);
 }
 
+/* Get next byte */
 static data_t fetch(cpu_t *c) {
     return c->load(c->PC++);
 }
 
+/* Get next word */
 static addr_t fetch_addr(cpu_t *c) {
     data_t lo = fetch(c);
     data_t hi = fetch(c);
-    return (hi << 8) | lo;
+    return WORD(hi, lo);
 }
 
-#define FLAG_C 0
-#define FLAG_P 2
-#define FLAG_A 4
-#define FLAG_Z 6
-#define FLAG_S 7
-
 static void set_flag(cpu_t *c, int f, bool b) {
-    c->FL &= ~(1 << f);
-    if (b) c->FL |= (1 << f);
+    if (b) c->FL |=  (1 << f); // Set the bit to 1
+    else   c->FL &= ~(1 << f); // Set the bit to 0
 }
 
 static void update_ZSP(cpu_t *c, data_t reg) {
-    set_flag(c, FLAG_Z, reg == 0x00);
-    set_flag(c, FLAG_S, reg  & 0x80);
+    set_flag(c, FLAG_Z, reg == 0x00); // Zero
+    set_flag(c, FLAG_S, reg  & 0x80); // Sign
 
+    /* Parity */
     int p = 0;
     for (int mask = (1<<7); mask > 0; mask >>= 1)
         if (reg & mask) p++;
@@ -120,11 +123,6 @@ static addr_t pop_word(cpu_t *c) {
 #define MVI(DST) \
     c->DST = fetch(c);
 
-#define MVI_M() do {                \
-    data_t data = fetch(c);         \
-    c->store(HL, data);             \
-} while (0);
-
 #define LXI(HI, LO) do {            \
     c->LO = fetch(c);               \
     c->HI = fetch(c);               \
@@ -163,22 +161,26 @@ static addr_t pop_word(cpu_t *c) {
     c->FL &= 0xd7;                  \
 } while (0);
 
-// TODO: figure out if the addresses are always fetched
+/* JMP JZ JNZ JC JNC JPE JPO JM JP */
 #define JMP(COND) do {              \
     addr_t addr = fetch_addr(c);    \
     if (!(COND)) break;             \
     c->PC = addr;                   \
 } while (0)
 
+/* CALL CZ CNZ CC CNC CPE CPO CM CP */
 #define CALL(COND) do {             \
     addr_t addr = fetch_addr(c);    \
     if (!(COND)) break;             \
+    cycles = 17;                    \
     push_word(c, c->PC);            \
     c->PC = addr;                   \
 } while (0)
 
+/* RET RZ RNZ RC RNC RPE RPO RM RP */
 #define RET(COND) do {              \
     if (!(COND)) break;             \
+    cycles = 11;                    \
     c->PC = pop_word(c);            \
 } while (0)
 
@@ -187,6 +189,7 @@ static addr_t pop_word(cpu_t *c) {
     c->PC = N << 3;                 \
 } while (0)
 
+/* INX DCX */
 #define INC16(HI, LO, INC) do {     \
     addr_t res = WORD(c->HI, c->LO) + (INC);\
     c->HI = HI_BYTE(res);           \
@@ -224,36 +227,34 @@ static addr_t pop_word(cpu_t *c) {
     set_flag(c, FLAG_C, bit);       \
 } while (0)
 
-// TODO: find conditions on bits instead of comparing with >
+/* DAA
+    I still don't understand how it is supposed to work with the carries
+*/
 static void daa(cpu_t *c) {
-    data_t adjust = 0;
+
     data_t lo = (c->A & 0x0f);
     data_t hi = (c->A & 0xf0);
-    int cy = c->FL & 0x01;
 
+    /* Low nibble and half carry */
     if (lo > 0x09 || c->FL & 0x10) {
-        adjust += 0x06;
+        c->A += 0x06;
+        set_flag(c, FLAG_A, lo + 0x06 > 0x0f);
     }
 
+    /* High nibble and normal carry */
     if (hi > 0x90 || c->FL & 0x01 || (hi >= 0x90 && lo > 0x09)) {
-        adjust += 0x60;
-        cy = 1;
+        c->A  += 0x60;
+        c->FL |= 0x01;
     }
 
-    uint16_t res = c->A + adjust;
-    uint16_t cr = res ^ adjust ^ c->A;
-    c->A = res;
-    update_ZSP(c, res);
-    set_flag(c, FLAG_A, cr & 0x010);
-    //set_flag(c, FLAG_C, cr & 0x100);
-    set_flag(c, FLAG_C, cy);
-
+    update_ZSP(c, c->A);
 }
 
-
+/* INR DCR */
 static data_t inc8(cpu_t *c, data_t data, int inc) {
     data += inc;
     update_ZSP(c, data);
+
     if (inc > 0) {
         set_flag(c, FLAG_A, (data & 0x0f) == 0x00);
     }
@@ -276,6 +277,7 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     c->A = res;                     \
 } while (0);
 
+/* ORA ORI XRA XRI */
 #define BITWIZE(OP, DATA) do {      \
     c->A = c->A OP (DATA);          \
     update_ZSP(c, c->A);            \
@@ -283,6 +285,7 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_C, 0);         \
 } while (0);
 
+/* ADD ADI ADC ACI */
 #define ADC(DATA, CMASK) do {       \
     data_t data = DATA;             \
     uint16_t res = c->A + data + (c->FL & CMASK);\
@@ -293,6 +296,7 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_C, cr & 0x100);\
 } while (0);
 
+/* SUB SBI SBB SBI */
 #define SBB(DATA, CMASK) do {       \
     data_t data = DATA;             \
     uint16_t res = c->A + ~data + !(c->FL & CMASK);\
@@ -303,6 +307,7 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_C,~cr & 0x100);\
 } while (0);
 
+/* CMP CPI */
 #define CMP(DATA) do {              \
     data_t data = DATA;             \
     uint16_t res = c->A + ~data + 1;\
@@ -311,6 +316,28 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     set_flag(c, FLAG_A, cr & 0x010);\
     set_flag(c, FLAG_C,~cr & 0x100);\
 } while (0);
+
+const int cycle_table[256] = {
+    4, 10,  7,  5,  5,  5,  7,  4,  4, 10,  7,  5,  5,  5,  7,  4,
+    4, 10,  7,  5,  5,  5,  7,  4,  4, 10,  7,  5,  5,  5,  7,  4,
+    4, 10, 16,  5,  5,  5,  7,  4,  4, 10, 16,  5,  5,  5,  7,  4,
+    4, 10, 13,  5, 10, 10, 10,  4,  4, 10, 13,  5,  5,  5,  7,  4,
+
+    5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,
+    5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,
+    5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,
+    7,  7,  7,  7,  7,  7,  7,  7,  5,  5,  5,  5,  5,  5,  7,  5,
+
+    4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+    4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+    4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+    4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+
+    5, 10, 10, 10, 11, 11,  7, 11,  5, 10, 10, 10, 11, 17,  7, 11,
+    5, 10, 10, 10, 11, 11,  7, 11,  5, 10, 10, 10, 11, 17,  7, 11,
+    5, 10, 10, 18, 11, 11,  7, 11,  5,  5, 10,  5, 11, 17,  7, 11,
+    5, 10, 10,  4, 11, 11,  7, 11,  5,  5, 10,  4, 11, 17,  7, 11,
+};
 
 
 int cpu_step(cpu_t *c) {
@@ -322,6 +349,8 @@ int cpu_step(cpu_t *c) {
 
     /* Fetch */
     uint8_t opc = fetch(c);
+
+    int cycles = cycle_table[opc];
 
     /* Decode */
     switch (opc) {
@@ -379,7 +408,7 @@ int cpu_step(cpu_t *c) {
         case 0x33: c->SP++;                             break; // INX SP
         case 0x34: c->store(HL, inc8(c, c->load(HL),  1)); break; // INR M
         case 0x35: c->store(HL, inc8(c, c->load(HL), -1)); break; // DCR M
-        case 0x36: MVI_M();                             break; // MVI M, d8
+        case 0x36: c->store(HL, fetch(c));              break; // MVI M, d8
         case 0x37: c->FL |= 0x01;                       break; // STC
         case 0x38: NOP();                               break; // NOP
         case 0x39: DAD(c->SP);                          break; // DAD SP
@@ -583,5 +612,5 @@ int cpu_step(cpu_t *c) {
         case 0xff: RST(7);                              break; // RST 7
     }
 
-    return 1;
+    return cycles;
 }

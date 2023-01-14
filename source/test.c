@@ -87,16 +87,6 @@ int main(int argc, char **argv) {
         0xc9,       // RET
     );
 
-/*
-        xchg
-loop:   mov a, m
-        cmp to $
-        ret if $
-        out 1
-        inx h
-        jmp loop
-*/
-
     FILE *fin = fopen(argv[1], "rb");
     if (!fin) {
         perror("Open test rom");
@@ -104,6 +94,7 @@ loop:   mov a, m
     }
 
     size_t loaded = RAM_LOAD_FILE(ram, LOAD_ADDR, fin);
+    fclose(fin);
     printf("==> Loaded %zu bytes from %s\n", loaded, argv[1]);
 
     unsigned long cycle = 0;
@@ -111,6 +102,6 @@ loop:   mov a, m
         cycle += cpu_step(&cpu);
     }
 
-    printf("\n\n==> Test done: %lu steps\n", cycle);
+    printf("\n\n==> Test done: %lu cycles\n", cycle);
     return 0;
 }
