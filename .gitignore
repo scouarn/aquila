@@ -1,6 +1,5 @@
 /bin
+/test_roms
 *.o
 *.so
 *.a
-*.ASM
-*.COM

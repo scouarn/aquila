@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "cpu.h"
+#include "ram.h"
 
 #define LOAD_AT(OFF, ...) do {              \
     data_t prog[] = { __VA_ARGS__ };        \
@@ -13,7 +14,7 @@
 #define TEST_BEGIN(X) do {                  \
     printf("Testing %-10s", X);             \
     fflush(stdout);                         \
-    cpu_hard_reset(&cpu);                   \
+    cpu_reset(&cpu);                        \
     memset(ram, 0, RAM_SIZE);
 
 #define TEST_END \
@@ -301,17 +302,17 @@ int main(void) {
 
     TEST_BEGIN("EI-DI");
         LOAD(
-            0xf3, // DI
             0xfb, // EI
+            0xf3, // DI
         );
 
-        TEST_ASSERT_EQ(cpu.inte, true);
-
-        cpu_step(&cpu);
         TEST_ASSERT_EQ(cpu.inte, false);
 
         cpu_step(&cpu);
         TEST_ASSERT_EQ(cpu.inte, true);
+
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.inte, false);
 
     TEST_END;
 
@@ -365,8 +366,9 @@ int main(void) {
         );
 
         cpu.A = 0x55;
+        cpu.FL = 2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ(cpu.A,  0xaa);
         TEST_ASSERT_EQ(cpu.FL, 0x02);
 
         cpu_step(&cpu);

@@ -6,7 +6,6 @@
 // https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
 // http://dunfield.classiccmp.org/r/8080.txt
 
-
 #define NIMPL assert(0 && "Not implemented")
 
 #define BC  WORD(c->B, c->C)
@@ -27,19 +26,7 @@ void cpu_reset(cpu_t *c) {
     c->FL |= 2;
     c->FL &= 0xd7;
     c->PC = 0;
-    c->hold = false;
-    c->inte = true;
-    c->interrupted = false;
-}
-
-void cpu_hard_reset(cpu_t *c) {
-    c->FL = 2;
-    c->PC = 0;
-    c->SP = 0xffff;
-    c->hold = false;
-    c->interrupted = false;
-    c->inte = true;
-    c->A = c->B = c->C = c->D = c->E = c->H = c->L = 0;
+    c->hold = c->inte = false;
 }
 
 void cpu_dump(cpu_t *c, FILE *fp) {
@@ -237,25 +224,28 @@ static addr_t pop_word(cpu_t *c) {
 } while (0)
 
 // TODO: find conditions on bits instead of comparing with >
-#define DAA() do {                  \
-    int lo = c->A & 0x0f;           \
-    int hc = c->FL & (1 << 4);      \
-    if (lo > 9 || hc) {             \
-        c->A += 6;                  \
-        if (lo + 6 > 0x0f)          \
-            c->FL |= (1 << 4);      \
-    }                               \
-                                    \
-    int hi = (c->A >> 4) & 0x0f;    \
-    int cr = c->FL & 1;             \
-    if (hi > 9 || cr) {             \
-        c->A += (6 << 4);           \
-        if (hi + 6 > 0x0f)          \
-            c->FL |= 1;             \
-    }                               \
-                                    \
-    update_ZSP(c, c->A);            \
-} while (0)
+static void daa(cpu_t *c) {
+    uint16_t res = c->A & 0x0f;
+    if (res > 0x09 || c->FL & 0x10) {
+        res += 0x06;
+    }
+
+    if (res & 0x010)
+         c->FL |=  0x10;
+    else c->FL &= ~0x10;
+
+    res += c->A & 0xf0;
+    if ((res & 0xf0) > 0x90 || c->FL & 0x01) {
+        res  += 0x60;
+    }
+
+    if (res & 0x100)
+         c->FL |=  0x01;
+    else c->FL &= ~0x01;
+
+    c->A = res;
+    update_ZSP(c, c->A);
+}
 
 
 static data_t inc8(cpu_t *c, data_t data, int inc) {
@@ -271,11 +261,23 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
     return data;
 }
 
+/* The 8080 logical AND instructions set the flag to
+    reflect the logical OR of bit 3 of the values involved
+    in the AND operation.  */
+#define AND(DATA) do {              \
+    data_t data = DATA;             \
+    data_t res  = c->A & data;      \
+    update_ZSP(c, res);             \
+    set_flag(c, FLAG_A, (c->A | data) & 0x08);\
+    set_flag(c, FLAG_C, 0);         \
+    c->A = res;                     \
+} while (0);
+
 #define BITWIZE(OP, DATA) do {      \
     c->A = c->A OP (DATA);          \
     update_ZSP(c, c->A);            \
-    set_flag(c, FLAG_C, 0);         \
     set_flag(c, FLAG_A, 0);         \
+    set_flag(c, FLAG_C, 0);         \
 } while (0);
 
 #define ADC(DATA, CMASK) do {       \
@@ -300,19 +302,19 @@ static data_t inc8(cpu_t *c, data_t data, int inc) {
 
 #define CMP(DATA) do {              \
     data_t data = DATA;             \
-    data_t res = c->A + ~data + 1;  \
-    data_t cr = res ^ ~data ^ c->A; \
+    uint16_t res = c->A + ~data + 1;\
+    uint16_t cr = res ^ ~data ^ c->A;\
     update_ZSP(c, res);             \
-    set_flag(c, FLAG_A, cr & 0x08); \
-    set_flag(c, FLAG_C,~cr & 0x80); \
+    set_flag(c, FLAG_A, cr & 0x010);\
+    set_flag(c, FLAG_C,~cr & 0x100);\
 } while (0);
 
 
-void cpu_step(cpu_t *c) {
+int cpu_step(cpu_t *c) {
 
     /* Check if halted */
-    if (c->hold && !c->interrupted) {
-        return;
+    if (c->hold) {
+        return 1;
     }
 
     /* Fetch */
@@ -359,7 +361,7 @@ void cpu_step(cpu_t *c) {
         case 0x24: c->H = inc8(c, c->H,  1);            break; // INR H
         case 0x25: c->H = inc8(c, c->H, -1);            break; // DCR H
         case 0x26: MVI(H);                              break; // MVI H, d8
-        case 0x27: DAA();                               break; // DAA
+        case 0x27: daa(c);                              break; // DAA
         case 0x28: NOP();                               break; // NOP
         case 0x29: DAD(HL);                             break; // DAD H
         case 0x2a: LHLD();                              break; // LHLD a16
@@ -480,14 +482,14 @@ void cpu_step(cpu_t *c) {
         case 0x9d: SBB(c->L, 1);                        break; // SBB L
         case 0x9e: SBB(c->load(HL), 1);                 break; // SBB M
         case 0x9f: SBB(c->A, 1);                        break; // SBB A
-        case 0xa0: BITWIZE(&, c->B);                    break; // ANA B
-        case 0xa1: BITWIZE(&, c->C);                    break; // ANA C
-        case 0xa2: BITWIZE(&, c->D);                    break; // ANA D
-        case 0xa3: BITWIZE(&, c->E);                    break; // ANA E
-        case 0xa4: BITWIZE(&, c->H);                    break; // ANA H
-        case 0xa5: BITWIZE(&, c->L);                    break; // ANA L
-        case 0xa6: BITWIZE(&, c->load(HL));             break; // ANA M
-        case 0xa7: BITWIZE(&, c->A);                    break; // ANA A
+        case 0xa0: AND(c->B);                           break; // ANA B
+        case 0xa1: AND(c->C);                           break; // ANA C
+        case 0xa2: AND(c->D);                           break; // ANA D
+        case 0xa3: AND(c->E);                           break; // ANA E
+        case 0xa4: AND(c->H);                           break; // ANA H
+        case 0xa5: AND(c->L);                           break; // ANA L
+        case 0xa6: AND(c->load(HL));                    break; // ANA M
+        case 0xa7: AND(c->A);                           break; // ANA A
         case 0xa8: BITWIZE(^, c->B);                    break; // XRA B
         case 0xa9: BITWIZE(^, c->C);                    break; // XRA C
         case 0xaa: BITWIZE(^, c->D);                    break; // XRA D
@@ -550,7 +552,7 @@ void cpu_step(cpu_t *c) {
         case 0xe3: XTHL();                              break; // XTHL
         case 0xe4: CALL(COND_PO);                       break; // CPO a16
         case 0xe5: push_word(c, HL);                    break; // PUSH H
-        case 0xe6: BITWIZE(&, fetch(c));                break; // ANI d8
+        case 0xe6: AND(fetch(c));                       break; // ANI d8
         case 0xe7: RST(4);                              break; // RST 4
         case 0xe8: RET(COND_PE);                        break; // RPE
         case 0xe9: c->PC = HL;                          break; // PCHL
@@ -578,4 +580,5 @@ void cpu_step(cpu_t *c) {
         case 0xff: RST(7);                              break; // RST 7
     }
 
+    return 1;
 }

@@ -1,11 +1,8 @@
-/* CPU interface */
 #ifndef CPU_H
 #define CPU_H
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#define RAM_SIZE 0x10000
 
 #define HI_BYTE(X) ((X >> 8) & 0xff)
 #define LO_BYTE(X) (X & 0xff)
@@ -27,7 +24,7 @@ typedef struct cpu_t {
     /* Program counter and stack pointer */
     addr_t PC, SP;
 
-    bool hold, inte, interrupted;
+    bool hold, inte;
 
     /* Memory and IO */
     void   (*store)  (addr_t, data_t);
@@ -40,14 +37,11 @@ typedef struct cpu_t {
 /* Display registers */
 void cpu_dump(cpu_t *c, FILE *fp);
 
-/* One instruction */
-void cpu_step(cpu_t*);
+/* One instruction, return the number of cycles */
+int cpu_step(cpu_t*);
 
 /* Only reset PC and hold/inte */
 void cpu_reset(cpu_t*);
-
-/* Set registers to 0 and SP to $ffff */
-void cpu_hard_reset(cpu_t*);
 
 /* Send itnerrupt signal */
 void cpu_interrupt(cpu_t*);
