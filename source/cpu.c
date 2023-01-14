@@ -5,6 +5,7 @@
 
 // https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
 // http://dunfield.classiccmp.org/r/8080.txt
+// https://www.autometer.de/unix4fun/z80pack/ftp/manuals/Intel/8080_8085_asm_Nov78.pdf
 
 #define NIMPL assert(0 && "Not implemented")
 
@@ -225,26 +226,28 @@ static addr_t pop_word(cpu_t *c) {
 
 // TODO: find conditions on bits instead of comparing with >
 static void daa(cpu_t *c) {
-    uint16_t res = c->A & 0x0f;
-    if (res > 0x09 || c->FL & 0x10) {
-        res += 0x06;
+    data_t adjust = 0;
+    data_t lo = (c->A & 0x0f);
+    data_t hi = (c->A & 0xf0);
+    int cy = c->FL & 0x01;
+
+    if (lo > 0x09 || c->FL & 0x10) {
+        adjust += 0x06;
     }
 
-    if (res & 0x010)
-         c->FL |=  0x10;
-    else c->FL &= ~0x10;
-
-    res += c->A & 0xf0;
-    if ((res & 0xf0) > 0x90 || c->FL & 0x01) {
-        res  += 0x60;
+    if (hi > 0x90 || c->FL & 0x01 || (hi >= 0x90 && lo > 0x09)) {
+        adjust += 0x60;
+        cy = 1;
     }
 
-    if (res & 0x100)
-         c->FL |=  0x01;
-    else c->FL &= ~0x01;
-
+    uint16_t res = c->A + adjust;
+    uint16_t cr = res ^ adjust ^ c->A;
     c->A = res;
-    update_ZSP(c, c->A);
+    update_ZSP(c, res);
+    set_flag(c, FLAG_A, cr & 0x010);
+    //set_flag(c, FLAG_C, cr & 0x100);
+    set_flag(c, FLAG_C, cy);
+
 }
 
 

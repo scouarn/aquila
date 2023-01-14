@@ -347,12 +347,17 @@ int main(void) {
 
     TEST_BEGIN("DAA");
         LOAD(
-            0x27, // DAA
+            0x3e, 0x08, // MVI A, 08
+            0xc6, 0x93, // ADI 93
+            0x27,       // DAA
         );
 
-        cpu.A = 0x9b;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x01);
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A,  0x9b);
+        TEST_ASSERT_EQ(cpu.FL, 0x82);
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ(cpu.A,  0x01);
         TEST_ASSERT_EQ(cpu.FL, 0x13);
 
     TEST_END;
