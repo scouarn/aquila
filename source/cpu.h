@@ -4,13 +4,23 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef uint16_t addr_t;
+typedef uint8_t  data_t;
+typedef uint8_t  port_t;
+
 #define HI_BYTE(X) ((X >> 8) & 0xff)
 #define LO_BYTE(X) (X & 0xff)
 #define WORD(H, L) ((H << 8) | L)
 
-typedef uint16_t addr_t;
-typedef uint8_t  data_t;
-typedef uint8_t  port_t;
+#define RAM_SIZE 0x10000
+
+#define RAM_LOAD(RAM, OFF, ...) do {        \
+    const data_t prog[] = { __VA_ARGS__ };  \
+    memcpy(RAM+OFF, prog, sizeof(prog));    \
+} while (0)
+
+#define RAM_LOAD_FILE(RAM, OFF, FP) \
+    fread(RAM+OFF, 1, sizeof(RAM)-OFF, FP);
 
 /* State of a 8080 CPU */
 typedef struct cpu_t {

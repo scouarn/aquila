@@ -7,7 +7,6 @@
 #include <signal.h>
 
 #include "cpu.h"
-#include "ram.h"
 
 
 /* Defining the machine */

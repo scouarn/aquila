@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "cpu.h"
-#include "ram.h"
 
 // https://altairclone.com/downloads/cpu_tests/
 

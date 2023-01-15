@@ -2,14 +2,6 @@
 #include <string.h>
 
 #include "cpu.h"
-#include "ram.h"
-
-#define LOAD_AT(OFF, ...) do {              \
-    data_t prog[] = { __VA_ARGS__ };        \
-    memcpy(ram+OFF, prog, sizeof(prog));    \
-} while (0)
-
-#define LOAD(...) LOAD_AT(0, __VA_ARGS__)
 
 #define TEST_BEGIN(X) do {                  \
     printf("Testing %-10s", X);             \
@@ -59,7 +51,7 @@ int main(void) {
     cpu.output = output;
 
     TEST_BEGIN("MOV"); // TODO: more tests for these instructions
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x7e, // MOV A, M
             0x47, // MOV B, A
             0x70, // MOV M, B
@@ -80,7 +72,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("STAX");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x02, // STAX B
             0x12, // STAX D
         );
@@ -98,7 +90,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("STA");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x32, 0x00, 0x40, // STA $4000
         );
 
@@ -108,7 +100,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("LDAX");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x0a, // LDAX B
             0x1a, // LDAX D
         );
@@ -126,7 +118,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("LDA");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x3a, 0x00, 0x40, // LDA $4000
         );
 
@@ -136,7 +128,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("SHLD");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x22, 0x00, 0x40, // SHLD $4000
         );
 
@@ -148,7 +140,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("LHLD");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x2a, 0x00, 0x40, // LHLD $4000
         );
 
@@ -161,7 +153,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("MVI");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x06, 0xbb, // MVI B, $bb
             0x0e, 0xcc, // MVI C, $cc
             0x16, 0xdd, // MVI D, $dd
@@ -200,7 +192,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("LXI");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x01, 0xcc, 0xbb, // LXI B, $bbcc
             0x11, 0xee, 0xdd, // LXI D, $ddee
             0x21, 0x11, 0xff, // LXI H, $ff11
@@ -225,7 +217,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("XCHG");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xeb // XCHG
         );
 
@@ -240,7 +232,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("SPHL");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xf9 // SPHL
         );
 
@@ -251,7 +243,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("PUSH"); // TODO: test with other registers
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xd5, // PUSH D
         );
 
@@ -265,7 +257,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("POP"); // TODO: test with other registers
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xe1, // POP H
         );
 
@@ -281,7 +273,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("XTHL");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xe3, // XTHL
         );
 
@@ -301,7 +293,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("EI-DI");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xfb, // EI
             0xf3, // DI
         );
@@ -317,7 +309,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("STC-CMC");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x37, // STC
             0x3f, // CMC
         );
@@ -335,7 +327,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("CMA");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x2f, // CMA
         );
 
@@ -346,7 +338,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("DAA");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x3e, 0x08, // MVI A, 08
             0xc6, 0x93, // ADI 93
             0x27,       // DAA
@@ -363,7 +355,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("ROT");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x07, // RLC
             0x17, // RAL
             0x0f, // RRC
@@ -392,18 +384,18 @@ int main(void) {
 
     TEST_BEGIN("JMP");
         /* Testing true condition */
-        LOAD_AT(0x0000, 0xc3, 0x50, 0x00); // JMP $0050
-        LOAD_AT(0x0050, 0xc2, 0x00, 0x10); // JNZ $1000
-        LOAD_AT(0x1000, 0xd2, 0x50, 0x10); // JNC $1050
-        LOAD_AT(0x1050, 0xe2, 0x00, 0x20); // JPO $2000
-        LOAD_AT(0x2000, 0xf2, 0x50, 0x20); // JP  $2050
-        LOAD_AT(0x2050, 0xca, 0x00, 0x30); // JZ  $3000
-        LOAD_AT(0x3000, 0xda, 0x50, 0x30); // JC  $3050
-        LOAD_AT(0x3050, 0xea, 0x00, 0x40); // JPE $4000
-        LOAD_AT(0x4000, 0xfa, 0x50, 0x40); // JM  $4050
+        RAM_LOAD(ram, 0x0000, 0xc3, 0x50, 0x00); // JMP $0050
+        RAM_LOAD(ram, 0x0050, 0xc2, 0x00, 0x10); // JNZ $1000
+        RAM_LOAD(ram, 0x1000, 0xd2, 0x50, 0x10); // JNC $1050
+        RAM_LOAD(ram, 0x1050, 0xe2, 0x00, 0x20); // JPO $2000
+        RAM_LOAD(ram, 0x2000, 0xf2, 0x50, 0x20); // JP  $2050
+        RAM_LOAD(ram, 0x2050, 0xca, 0x00, 0x30); // JZ  $3000
+        RAM_LOAD(ram, 0x3000, 0xda, 0x50, 0x30); // JC  $3050
+        RAM_LOAD(ram, 0x3050, 0xea, 0x00, 0x40); // JPE $4000
+        RAM_LOAD(ram, 0x4000, 0xfa, 0x50, 0x40); // JM  $4050
 
         /* Testing false condition */
-        LOAD_AT(0x4050,
+        RAM_LOAD(ram, 0x4050,
             0xc2, 0x00, 0x50, // JNZ $5000
             0xd2, 0x50, 0x50, // JNC $5050
             0xe2, 0x00, 0x60, // JPO $6000
@@ -490,7 +482,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("INX");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x03, // INX B
             0x13, // INX D
             0x23, // INX H
@@ -519,7 +511,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("DCX");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x0b, // DCX B
             0x1b, // DCX D
             0x2b, // DCX H
@@ -548,7 +540,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("DAD");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x09, // DAD B
             0x19, // DAD D
             0x29, // DAD H
@@ -592,7 +584,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("INR");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x04, // INR B
             0x0c, // INR C
             0x14, // INR D
@@ -647,7 +639,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("DCR");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x05, // DCR B
             0x0d, // DCR C
             0x15, // DCR D
@@ -702,7 +694,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("AND"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xa0,       // ANA B
             0xa1,       // ANA C
             0xa2,       // ANA D
@@ -755,7 +747,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("OR"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xb0,       // ORA B
             0xb1,       // ORA C
             0xb2,       // ORA D
@@ -808,7 +800,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("XOR"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xa8,       // XRA B
             0xa9,       // XRA C
             0xaa,       // XRA D
@@ -861,7 +853,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("ADD"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x80,       // ADD B
             0x81,       // ADD C
             0x82,       // ADD D
@@ -914,7 +906,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("SUB"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x90,       // SUB B
             0x91,       // SUB C
             0x92,       // SUB D
@@ -967,7 +959,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("ADC"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x88,       // ADC B
             0x89,       // ADC C
             0x8a,       // ADC D
@@ -1029,7 +1021,7 @@ int main(void) {
     TEST_END;
 
     TEST_BEGIN("SBB"); // TODO: test flags
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x98,       // SBB B
             0x99,       // SBB C
             0x9a,       // SBB D
@@ -1092,7 +1084,7 @@ int main(void) {
 
 #if 0
     TEST_BEGIN("CMP");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0x98,       // SBB B
             0x99,       // SBB C
             0x9a,       // SBB D
@@ -1155,7 +1147,7 @@ int main(void) {
 #endif
 
     TEST_BEGIN("IN-OUT");
-        LOAD(
+        RAM_LOAD(ram, 0x0000,
             0xdb, 0x80, // IN  $80
             0xd3, 0x81, // OUT $81
         );
