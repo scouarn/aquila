@@ -8,6 +8,7 @@
 // https://altairclone.com/downloads/cpu_tests/
 
 #define LOAD_ADDR 0x0100
+#define TTY_PORT  1
 
 static cpu_t cpu;
 static data_t ram[RAM_SIZE];
@@ -21,9 +22,6 @@ static void store(addr_t addr, data_t data) {
 }
 
 static data_t input(port_t port) {
-    (void)port;
-    return 0x00;
-/*
     switch (port) {
 
         case TTY_PORT: {
@@ -34,31 +32,16 @@ static data_t input(port_t port) {
 
         default: return 0x00;
     }
-*/
 }
 
 static void output(port_t port, data_t data) {
+    switch (port) {
 
-    if (port != 1) return;
+        case TTY_PORT:
+            fputc(data, stdout);
+        break;
 
-    switch (cpu.C) {
-
-    case 2: // print E
-        fputc(data, stdout);
-    break;
-
-    case 9: { // dump mem from DE to $ char
-        addr_t addr = WORD(cpu.D, cpu.E);
-        data_t chr;
-
-        while ((chr = load(addr++)) != '$') {
-            fputc(chr, stdout);
-        }
-
-        fflush(stdout);
-    } break;
-
-    default: break;
+        default: break;
     }
 }
 
@@ -82,9 +65,30 @@ int main(int argc, char **argv) {
         0x76 // HLT
     );
 
+    /* BDOS syscall jump table */
     RAM_LOAD(ram, 0x0005,
-        0xd3, 0x01, // OUT 1
-        0xc9,       // RET
+        0x79,               // MOV A, C
+        0xfe, 0x02,         // CPI $02
+        0xca, 0x10, 0x00,   // JZ  putchar
+        0xc3, 0x20, 0x00,   // JMP puts
+    );
+
+    /* Syscall 2 putchar E */
+    RAM_LOAD(ram, 0x0010,
+        0x7b,               // MOV A, E
+        0xd3, TTY_PORT,     // OUT TTY
+        0xc9,               // RET
+    );
+
+    /* Syscall 9 puts DE terminated by '$' */
+    RAM_LOAD(ram, 0x0020,
+        0xeb,               // XCHG : move DE in HL
+        0x7e,               // MOV A, M
+        0xfe, '$',          // CPI '$'
+        0xc8,               // RZ
+        0xd3, TTY_PORT,     // OUT TTY
+        0x23,               // INX H
+        0xc3, 0x21, 0x00,   // JMP loop
     );
 
     FILE *fin = fopen(argv[1], "rb");
