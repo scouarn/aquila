@@ -25,7 +25,7 @@ static data_t input(port_t port) {
     switch (port) {
 
         case TTY_PORT: {
-            int c = fgetc(tty_fp);
+            int c = fgetc(stdin);
             if (c == EOF) return 0x00;
             else return (data_t)c;
         } break;
@@ -39,6 +39,7 @@ static void output(port_t port, data_t data) {
 
         case TTY_PORT:
             fputc(data, stdout);
+            fflush(stdout);
         break;
 
         default: break;
@@ -61,34 +62,38 @@ int main(int argc, char **argv) {
     cpu.PC = LOAD_ADDR;
     cpu.SP = 0xffff;
 
+    /* BDOS syscall 2 and 9 */
     RAM_LOAD(ram, 0x0000,
-        0x76 // HLT
-    );
+        0x76,               // HLT
+        0x00, 0x00,         // NOP
+        0x00, 0x00,
 
-    /* BDOS syscall jump table */
-    RAM_LOAD(ram, 0x0005,
+        // $0005 bdos:      // Entry point for BDOS syscalls
+        0xf5,               // PUSH PSW
+        0xe5,               // PUSH HL
         0x79,               // MOV A, C
         0xfe, 0x02,         // CPI $02
-        0xca, 0x10, 0x00,   // JZ  putchar
-        0xc3, 0x20, 0x00,   // JMP puts
-    );
+        0xcc, 0x15, 0x00,   // CZ putchar
+        0xfe, 0x09,         // CPI $09
+        0xcc, 0x19, 0x00,   // CZ puts
+        0xe1,               // POP HL
+        0xf1,               // POP PSW
+        0xc9,               // RET
 
-    /* Syscall 2 putchar E */
-    RAM_LOAD(ram, 0x0010,
+        // $0015 putchar:   // Syscall 2 : putchar E
         0x7b,               // MOV A, E
         0xd3, TTY_PORT,     // OUT TTY
         0xc9,               // RET
-    );
 
-    /* Syscall 9 puts DE terminated by '$' */
-    RAM_LOAD(ram, 0x0020,
+        // $0019 puts:      // Syscall 9 : put string DE terminated by '$'
         0xeb,               // XCHG : move DE in HL
+        // $001a loop:
         0x7e,               // MOV A, M
         0xfe, '$',          // CPI '$'
         0xc8,               // RZ
         0xd3, TTY_PORT,     // OUT TTY
         0x23,               // INX H
-        0xc3, 0x21, 0x00,   // JMP loop
+        0xc3, 0x1a, 0x00,   // JMP loop
     );
 
     FILE *fin = fopen(argv[1], "rb");
