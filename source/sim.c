@@ -8,12 +8,14 @@
 
 #include "cpu.h"
 
-
 /* Defining the machine */
 static cpu_t  cpu;
 static data_t ram[RAM_SIZE];
 static addr_t addr_bus, addr_reg;
 static data_t data_bus, data_reg;
+
+#define TTY_PORT 0
+//sock_fd tty_sock;
 
 static data_t load(addr_t addr) {
     addr_bus = addr;
@@ -28,11 +30,34 @@ static void store(addr_t addr, data_t data) {
 }
 
 static data_t input(port_t port) {
-    return ram[port];
+    addr_bus = port;
+
+    switch(port) {
+        case TTY_PORT:
+            printf("Input: ");
+            fflush(stdout);
+            scanf("%c", &data_bus);
+        break;
+
+        default: 
+            data_bus = 0x00;
+        break;
+    }
+
+    return data_bus;
 }
 
 static void output(port_t port, data_t data) {
-    ram[port] = data;
+    addr_bus = port;
+    data_bus = data;
+
+    switch(port) {
+        case TTY_PORT:
+            printf("Output : %c\n", data);
+        break;
+
+        default: break;
+    }
 }
 
 static void print(void) {
@@ -216,5 +241,6 @@ int main(void) {
 
 end_while:
     printf("Bye!\n");
+
     return 0;
 }

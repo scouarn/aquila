@@ -13,6 +13,7 @@ typedef uint8_t  port_t;
 #define WORD(H, L) ((H << 8) | L)
 
 #define RAM_SIZE 0x10000
+#define MAX_PORT 256
 
 #define RAM_LOAD(RAM, OFF, ...) do {        \
     const data_t prog[] = { __VA_ARGS__ };  \
