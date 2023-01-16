@@ -19,13 +19,17 @@
     break
 
 #define TEST_ASSERT_EQ(REG, VAL) \
-    if (REG != VAL) { TEST_FAIL(#REG " is %d instead of %d", REG, VAL); }
+    if ((REG) != (VAL)) { TEST_FAIL(#REG " is %d instead of %d", REG, VAL); }
 
 #define TEST_ASSERT_EQ8(REG, VAL) \
-    if (REG != VAL) { TEST_FAIL(#REG " is $%02x instead of $%02x", REG, VAL); }
+    if ((REG) != (VAL)) { TEST_FAIL(#REG " is $%02x instead of $%02x", REG, VAL); }
 
 #define TEST_ASSERT_EQ16(REG, VAL) \
-    if (REG != VAL) { TEST_FAIL(#REG " is $%04x instead of $%04x", REG, VAL); }
+    if ((REG) != (VAL)) { TEST_FAIL(#REG " is $%04x instead of $%04x", REG, VAL); }
+
+#define BC WORD(cpu.B, cpu.C)
+#define DE WORD(cpu.D, cpu.E)
+#define HL WORD(cpu.H, cpu.L)
 
 static cpu_t cpu;
 static data_t ram[RAM_SIZE];
@@ -152,8 +156,7 @@ int main(void) {
         ram[0x4000] = 0xaa;
         ram[0x4001] = 0xbb;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0xbb);
-        TEST_ASSERT_EQ8(cpu.L, 0xaa);
+        TEST_ASSERT_EQ16(HL, 0xbbaa);
 
     TEST_END;
 
@@ -205,16 +208,13 @@ int main(void) {
         );
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.B, 0xbb);
-        TEST_ASSERT_EQ8(cpu.C, 0xcc);
+        TEST_ASSERT_EQ8(BC, 0xbbcc);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.D, 0xdd);
-        TEST_ASSERT_EQ8(cpu.E, 0xee);
+        TEST_ASSERT_EQ16(DE, 0xddee);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0xff);
-        TEST_ASSERT_EQ8(cpu.L, 0x11);
+        TEST_ASSERT_EQ16(HL, 0xff11);
 
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.SP, 0x3344);
@@ -229,10 +229,8 @@ int main(void) {
         cpu.H = 0xaa; cpu.L = 0xbb;
         cpu.D = 0xdd; cpu.E = 0xee;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0xdd);
-        TEST_ASSERT_EQ8(cpu.L, 0xee);
-        TEST_ASSERT_EQ8(cpu.D, 0xaa);
-        TEST_ASSERT_EQ8(cpu.E, 0xbb);
+        TEST_ASSERT_EQ16(HL, 0xddee);
+        TEST_ASSERT_EQ16(DE, 0xaabb);
 
     TEST_END;
 
@@ -271,8 +269,7 @@ int main(void) {
         cpu.SP = 0x1239;
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x93);
-        TEST_ASSERT_EQ8(cpu.L, 0x3D);
+        TEST_ASSERT_EQ16(HL, 0x933d);
         TEST_ASSERT_EQ16(cpu.SP, 0x123b);
 
     TEST_END;
@@ -283,14 +280,12 @@ int main(void) {
         );
 
         cpu.SP = 0x10ad;
-        cpu.H = 0x0b;
-        cpu.L = 0x3c;
+        cpu.H = 0x0b; cpu.L = 0x3c;
         ram[0x10ad] = 0xf0;
         ram[0x10ae] = 0x0d;
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x0d);
-        TEST_ASSERT_EQ8(cpu.L, 0xf0);
+        TEST_ASSERT_EQ16(HL, 0x0df0);
         TEST_ASSERT_EQ8(ram[0x10ae], 0x0b);
         TEST_ASSERT_EQ8(ram[0x10ad], 0x3c);
         TEST_ASSERT_EQ16(cpu.SP, 0x10ad);
@@ -319,15 +314,13 @@ int main(void) {
             0x3f, // CMC
         );
 
-        if (cpu.FL != 0x02) { // The bit which is alway 1
-            TEST_FAIL("FL=$%02x", cpu.FL);
-        }
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, 0);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.FL, 0x03);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, FLAG_C);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.FL, 0x02);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, 0);
 
     TEST_END;
 
@@ -496,18 +489,15 @@ int main(void) {
 
         cpu.B = 0x0a; cpu.C = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.B, 0x0b);
-        TEST_ASSERT_EQ8(cpu.C, 0x00);
+        TEST_ASSERT_EQ16(BC, 0x0b00);
 
         cpu.D = 0xff; cpu.E = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.D, 0x00);
-        TEST_ASSERT_EQ8(cpu.E, 0x00);
+        TEST_ASSERT_EQ16(DE, 0x0000);
 
         cpu.H = 0x0c; cpu.L = 0xfe;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x0c);
-        TEST_ASSERT_EQ8(cpu.L, 0xff);
+        TEST_ASSERT_EQ16(HL, 0x0cff);
 
         cpu.SP = 0x00ff;
         cpu_step(&cpu);
@@ -525,18 +515,15 @@ int main(void) {
 
         cpu.B = 0x01; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.B, 0x00);
-        TEST_ASSERT_EQ8(cpu.C, 0xff);
+        TEST_ASSERT_EQ16(BC, 0x00ff);
 
         cpu.D = 0x00; cpu.E = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.D, 0xff);
-        TEST_ASSERT_EQ8(cpu.E, 0xff);
+        TEST_ASSERT_EQ16(DE, 0xffff);
 
         cpu.H = 0x0c; cpu.L = 0xfe;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x0c);
-        TEST_ASSERT_EQ8(cpu.L, 0xfd);
+        TEST_ASSERT_EQ16(HL, 0x0cfd);
 
         cpu.SP = 0x0100;
         cpu_step(&cpu);
@@ -553,38 +540,25 @@ int main(void) {
         );
 
         cpu.H = 0x00; cpu.L = 0x00;
-
         cpu.B = 0xab; cpu.C = 0xcd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0xab);
-        TEST_ASSERT_EQ8(cpu.L, 0xcd);
-        if (cpu.FL & 0x01) {
-            TEST_FAIL("C=%d", cpu.FL & 0x01);
-        }
+        TEST_ASSERT_EQ16(HL, 0xabcd);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, 0);
 
         cpu.D = 0x11; cpu.E = 0x22;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0xbc);
-        TEST_ASSERT_EQ8(cpu.L, 0xef);
-        if (cpu.FL & 0x01) {
-            TEST_FAIL("C'=%d", cpu.FL & 0x01);
-        }
+        TEST_ASSERT_EQ16(HL, 0xbcef);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, 0);
 
         // Shift HL by one
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x79);
-        TEST_ASSERT_EQ8(cpu.L, 0xde);
-        if (!(cpu.FL & 0x01)) {
-            TEST_FAIL("C''=%d", cpu.FL & 0x01);
-        }
+        TEST_ASSERT_EQ16(HL, 0x79de);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, FLAG_C);
 
         cpu.SP = 0x1fff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ8(cpu.H, 0x99);
-        TEST_ASSERT_EQ8(cpu.L, 0xdd);
-        if (cpu.FL & 0x01) {
-            TEST_FAIL("C'''=%d", cpu.FL & 0x01);
-        }
+        TEST_ASSERT_EQ16(HL, 0x99dd);
+        TEST_ASSERT_EQ(cpu.FL & FLAG_C, 0);
 
     TEST_END;
 
@@ -1245,22 +1219,22 @@ int main(void) {
 
         /* Step through RST 4 procedure */
         cpu_step(&cpu); // MVI A, $77
-        TEST_ASSERT_EQ(cpu.inte, 0);
+        TEST_ASSERT_EQ(cpu.inte, false);
         TEST_ASSERT_EQ8(cpu.A, 0x77);
         TEST_ASSERT_EQ16(cpu.PC, 0x22);
 
         cpu_step(&cpu); // EI
-        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ(cpu.inte, true);
         TEST_ASSERT_EQ8(cpu.A, 0x77);
         TEST_ASSERT_EQ16(cpu.PC, 0x23);
 
         cpu_step(&cpu); // RET
-        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ(cpu.inte, true);
         TEST_ASSERT_EQ8(cpu.A, 0x77);
         TEST_ASSERT_EQ16(cpu.PC, 0x104);
 
         cpu_step(&cpu); // MVI A, $12 (back to main program)
-        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ(cpu.inte, true);
         TEST_ASSERT_EQ8(cpu.A, 0x12);
         TEST_ASSERT_EQ16(cpu.PC, 0x106);
 
