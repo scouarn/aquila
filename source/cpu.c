@@ -29,12 +29,11 @@
 #define COND_PO  (!COND_PE)
 #define COND_P   (!COND_M)
 
-void cpu_reset(cpu_t *c) {
-    c->FL |= 2;     // The bit which is always 1
-    c->FL &= 0xd7;  // The bits which are always 0
-    c->PC = 0;
-    c->hold = c->inte = false;
-}
+/* The bit which is always 1 and the bits which are always 0 */
+#define ENFORCE_FLAGS() do {            \
+    c->FL |= 2;                         \
+    c->FL &= 0xd7;                      \
+} while (0)
 
 void cpu_dump(cpu_t *c, FILE *fp) {
     fprintf(fp, "A:  %02x    FL: %02x\n", c->A, c->FL);
@@ -45,8 +44,45 @@ void cpu_dump(cpu_t *c, FILE *fp) {
     fprintf(fp, "SP: %04x\n", c->SP);
 }
 
+void cpu_reset(cpu_t *c) {
+    ENFORCE_FLAGS();
+    c->PC = 0;
+    c->hold = c->inte = false;
+    c->fetch_data = NULL;
+    c->cycles = 0;
+}
+
+int cpu_irq(cpu_t *c, data_t instruction[]) {
+    if (!c->inte) return 0;
+
+    c->inte = false;
+    c->fetch_data = instruction;
+    cpu_step(c);
+    c->fetch_data = NULL;
+
+    return 1;
+}
+
+int cpu_irq_rst(cpu_t *c, unsigned int code) {
+    if (code > 7) return 0;
+
+    /* RST code */
+    data_t instruction = 0xc7 | (code << 3);
+
+    return cpu_irq(c, &instruction);
+}
+
 /* Get next byte */
 static data_t fetch(cpu_t *c) {
+
+    /* Fetch interrupt instruction */
+    if (c->fetch_data != NULL) {
+        data_t data = *c->fetch_data;
+        c->fetch_data++;
+        return data;
+    }
+
+    /* Fetch from memory */
     return c->load(c->PC++);
 }
 
@@ -157,8 +193,7 @@ static addr_t pop_word(cpu_t *c) {
 
 #define POP_PSW() do {              \
     POP(A, FL);                     \
-    c->FL |= 2;                     \
-    c->FL &= 0xd7;                  \
+    ENFORCE_FLAGS();                \
 } while (0);
 
 /* JMP JZ JNZ JC JNC JPE JPO JM JP */
@@ -172,7 +207,7 @@ static addr_t pop_word(cpu_t *c) {
 #define CALL(COND) do {             \
     addr_t addr = fetch_addr(c);    \
     if (!(COND)) break;             \
-    cycles = 17;                    \
+    c->cycles += 5;                 \
     push_word(c, c->PC);            \
     c->PC = addr;                   \
 } while (0)
@@ -180,7 +215,7 @@ static addr_t pop_word(cpu_t *c) {
 /* RET RZ RNZ RC RNC RPE RPO RM RP */
 #define RET(COND) do {              \
     if (!(COND)) break;             \
-    cycles = 11;                    \
+    c->cycles += 6;                 \
     c->PC = pop_word(c);            \
 } while (0)
 
@@ -340,19 +375,19 @@ const int cycle_table[256] = {
 };
 
 
-int cpu_step(cpu_t *c) {
+void cpu_step(cpu_t *c) {
 
     /* Check if halted */
     if (c->hold) {
-        return 1;
+        //c->cycles += 1;
+        return;
     }
 
     /* Fetch */
     uint8_t opc = fetch(c);
+    c->cycles += cycle_table[opc];
 
-    int cycles = cycle_table[opc];
-
-    /* Decode */
+    /* Decode-Excecute */
     switch (opc) {
         case 0x00: NOP();                               break; // NOP
         case 0x01: LXI(B, C);                           break; // LXI B, d16
@@ -612,5 +647,4 @@ int cpu_step(cpu_t *c) {
         case 0xff: RST(7);                              break; // RST 7
     }
 
-    return cycles;
 }

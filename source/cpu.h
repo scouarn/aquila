@@ -35,7 +35,15 @@ typedef struct cpu_t {
     /* Program counter and stack pointer */
     addr_t PC, SP;
 
+    /* hold/halt and interrupt enable bits */
     bool hold, inte;
+
+    /* If not NULL, instructions will be fetched from this pointer,
+        used for interrupt requests */
+    data_t *fetch_data;
+
+    /* Number of cycles from last cpu_reset */
+    uint64_t cycles;
 
     /* Memory and IO */
     void   (*store)  (addr_t, data_t);
@@ -48,13 +56,19 @@ typedef struct cpu_t {
 /* Display registers */
 void cpu_dump(cpu_t *c, FILE *fp);
 
-/* One instruction, return the number of cycles */
-int cpu_step(cpu_t*);
+/* One instruction */
+void cpu_step(cpu_t*);
 
 /* Only reset PC and hold/inte */
 void cpu_reset(cpu_t*);
 
-/* Send itnerrupt signal */
-void cpu_interrupt(cpu_t*);
+/* Send interrupt with data for one instruction,
+    return 1 if the irq was acknoledged */
+int cpu_irq(cpu_t*, data_t instruction[]);
+
+/* Send interrupt with a RST instruction,
+    the code must be <= 7,
+    return 1 if the irq was acknoledged */
+int cpu_irq_rst(cpu_t*, unsigned int code);
 
 #endif

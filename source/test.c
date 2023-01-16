@@ -103,11 +103,10 @@ int main(int argc, char **argv) {
     fclose(fin);
     printf("==> Loaded %zu bytes from %s\n", loaded, argv[1]);
 
-    unsigned long cycle = 0;
     while (!cpu.hold) {
-        cycle += cpu_step(&cpu);
+        cpu_step(&cpu);
     }
 
-    printf("\n\n==> Test done: %lu cycles\n", cycle);
+    printf("\n\n==> Test done: %lu cycles\n", cpu.cycles);
     return 0;
 }
