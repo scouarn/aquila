@@ -23,6 +23,12 @@ typedef uint8_t  port_t;
 #define RAM_LOAD_FILE(RAM, OFF, FP) \
     fread(RAM+OFF, 1, sizeof(RAM)-OFF, FP);
 
+#define FLAG_C 0x01
+#define FLAG_P 0x04
+#define FLAG_A 0x10
+#define FLAG_Z 0x40
+#define FLAG_S 0x80
+
 /* State of a 8080 CPU */
 typedef struct cpu_t {
 

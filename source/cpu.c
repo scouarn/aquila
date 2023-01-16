@@ -14,16 +14,10 @@
 #define HL  WORD(c->H, c->L)
 #define PSW WORD(c->A, c->FL)
 
-#define FLAG_C 0
-#define FLAG_P 2
-#define FLAG_A 4
-#define FLAG_Z 6
-#define FLAG_S 7
-
-#define COND_Z   (c->FL & (1 << FLAG_Z))
-#define COND_C   (c->FL & (1 << FLAG_C))
-#define COND_PE  (c->FL & (1 << FLAG_P))
-#define COND_M   (c->FL & (1 << FLAG_S))
+#define COND_Z   (c->FL & FLAG_Z)
+#define COND_C   (c->FL & FLAG_C)
+#define COND_PE  (c->FL & FLAG_P)
+#define COND_M   (c->FL & FLAG_S)
 #define COND_NZ  (!COND_Z)
 #define COND_NC  (!COND_C)
 #define COND_PO  (!COND_PE)
@@ -95,8 +89,8 @@ static addr_t fetch_addr(cpu_t *c) {
 }
 
 static void set_flag(cpu_t *c, int f, bool b) {
-    if (b) c->FL |=  (1 << f); // Set the bit to 1
-    else   c->FL &= ~(1 << f); // Set the bit to 0
+    if (b) c->FL |=  f; // Set the bit to 1
+    else   c->FL &= ~f; // Set the bit to 0
 }
 
 /* Update the value of zero, sign and parity flag
@@ -255,13 +249,13 @@ static addr_t pop_word(cpu_t *c) {
 
 #define RAL() do {                  \
     int bit = (c->A >> 7) & 0x01;   \
-    c->A = (c->A << 1) | (c->FL & 0x01);\
+    c->A = (c->A << 1) | (c->FL & FLAG_C);\
     set_flag(c, FLAG_C, bit);       \
 } while (0)
 
 #define RAR() do {                  \
     int bit = c->A & 0x01;          \
-    c->A = (c->A >> 1) | ((c->FL & 0x01) << 7);\
+    c->A = (c->A >> 1) | ((c->FL & FLAG_C) << 7);\
     set_flag(c, FLAG_C, bit);       \
 } while (0)
 
@@ -274,15 +268,15 @@ static void daa(cpu_t *c) {
     data_t hi = (c->A & 0xf0);
 
     /* Low nibble and half carry */
-    if (lo > 0x09 || c->FL & 0x10) {
+    if (lo > 0x09 || c->FL & FLAG_A) {
         c->A += 0x06;
         set_flag(c, FLAG_A, lo + 0x06 > 0x0f);
     }
 
     /* High nibble and normal carry */
-    if (hi > 0x90 || c->FL & 0x01 || (hi >= 0x90 && lo > 0x09)) {
+    if (hi > 0x90 || c->FL & FLAG_C || (hi >= 0x90 && lo > 0x09)) {
         c->A  += 0x60;
-        c->FL |= 0x01;
+        c->FL |= FLAG_C;
     }
 
     update_ZSP(c, c->A);
@@ -447,7 +441,7 @@ void cpu_step(cpu_t *c) {
         case 0x34: c->store(HL, inc8(c, c->load(HL),  1)); break; // INR M
         case 0x35: c->store(HL, inc8(c, c->load(HL), -1)); break; // DCR M
         case 0x36: c->store(HL, fetch(c));              break; // MVI M, d8
-        case 0x37: c->FL |= 0x01;                       break; // STC
+        case 0x37: c->FL |= FLAG_C;                     break; // STC
         case 0x38: NOP();                               break; // NOP
         case 0x39: DAD(c->SP);                          break; // DAD SP
         case 0x3a: LDA();                               break; // LDA a16
@@ -455,7 +449,7 @@ void cpu_step(cpu_t *c) {
         case 0x3c: c->A = inc8(c, c->A,  1);            break; // INR A
         case 0x3d: c->A = inc8(c, c->A, -1);            break; // DCR A
         case 0x3e: MVI(A);                              break; // MVI A, d8
-        case 0x3f: c->FL ^= 0x01;                       break; // CMC
+        case 0x3f: c->FL ^= FLAG_C;                     break; // CMC
         case 0x40: MOV_RR(B, B);                        break; // MOV B, B
         case 0x41: MOV_RR(B, C);                        break; // MOV B, C
         case 0x42: MOV_RR(B, D);                        break; // MOV B, D

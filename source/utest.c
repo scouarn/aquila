@@ -417,70 +417,70 @@ int main(void) {
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x0050);
 
-        cpu.FL = ~(1U << 6) & 0xff;
+        cpu.FL = ~FLAG_Z;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x1000);
 
-        cpu.FL = ~(1U << 0) & 0xff;
+        cpu.FL = ~FLAG_C;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x1050);
 
-        cpu.FL = ~(1U << 2) & 0xff;
+        cpu.FL = ~FLAG_P;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x2000);
 
-        cpu.FL = ~(1U << 7) & 0xff;
+        cpu.FL = (data_t)~FLAG_S;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x2050);
 
-        cpu.FL = (1U << 6) & 0xff;
+        cpu.FL = FLAG_Z;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x3000);
 
-        cpu.FL = (1U << 0) & 0xff;
+        cpu.FL = FLAG_C;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x3050);
 
-        cpu.FL = (1U << 2) & 0xff;
+        cpu.FL = FLAG_P;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4000);
 
-        cpu.FL = (1U << 7) & 0xff;
+        cpu.FL = FLAG_S;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4050);
 
 
         /* False condition */
 
-        cpu.FL = (1U << 6) & 0xff;
+        cpu.FL = FLAG_Z;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4053);
 
-        cpu.FL = (1U << 0) & 0xff;
+        cpu.FL = FLAG_C;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4056);
 
-        cpu.FL = (1U << 2) & 0xff;
+        cpu.FL = FLAG_P;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4059);
 
-        cpu.FL = (1U << 7) & 0xff;
+        cpu.FL = FLAG_S;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x405c);
 
-        cpu.FL = ~(1U << 6) & 0xff;
+        cpu.FL = ~FLAG_Z;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x405f);
 
-        cpu.FL = ~(1U << 0) & 0xff;
+        cpu.FL = ~FLAG_C;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4062);
 
-        cpu.FL = ~(1U << 2) & 0xff;
+        cpu.FL = ~FLAG_P;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4065);
 
-        cpu.FL = ~(1U << 7) & 0xff;
+        cpu.FL = (data_t)~FLAG_S;
         cpu_step(&cpu);
         TEST_ASSERT_EQ16(cpu.PC, 0x4068);
 
@@ -1179,30 +1179,18 @@ int main(void) {
         data_t ins[3];
         int ack;
 
-        /* Load RST 4 procedures */
+        /* RST 4 procedure */
         RAM_LOAD(ram, 0x0020,
             0x3e, 0x77, // MVI A, $77
             0xfb,       // EI
             0xc9,       // RET
         );
 
+        /* Main program */
         RAM_LOAD(ram, 0x0100,
             0x3e, 0x10, // MVI A, 0x10
             0x3e, 0x11, // MVI A, 0x11
             0x3e, 0x12, // MVI A, 0x12
-            0x3e, 0x13, // MVI A, 0x13
-            0x3e, 0x14, // MVI A, 0x14
-            0x3e, 0x15, // MVI A, 0x15
-            0x3e, 0x16, // MVI A, 0x16
-            0x3e, 0x17, // MVI A, 0x17
-            0x3e, 0x18, // MVI A, 0x18
-            0x3e, 0x19, // MVI A, 0x19
-            0x3e, 0x1a, // MVI A, 0x1a
-            0x3e, 0x1b, // MVI A, 0x1b
-            0x3e, 0x1c, // MVI A, 0x1c
-            0x3e, 0x1d, // MVI A, 0x1d
-            0x3e, 0x1e, // MVI A, 0x1e
-            0x3e, 0x1f, // MVI A, 0x1f
         );
 
         /* Step normal instruction */
