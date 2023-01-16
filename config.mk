@@ -8,7 +8,7 @@ LDFLAGS +=
 LDLIBS  +=
 
 # Additional options for debug/release
-CFLAGS += -O3
+#CFLAGS += -O3
 #CFLAGS += -ggdb
 
 # Build directories

@@ -1173,16 +1173,108 @@ int main(void) {
 
     TEST_END;
 
-    TEST_BEGIN("IRQ");
+    // TODO tests for PCHL RET CALL RST
 
-        /* Load RST n procedures */
-        for (int i = 0; i < 8; i++)
-        RAM_LOAD(ram, i*8,
-            0x3e, i,    // MVI A, i
+    TEST_BEGIN("IRQ");
+        data_t ins[3];
+        int ack;
+
+        /* Load RST 4 procedures */
+        RAM_LOAD(ram, 0x0020,
+            0x3e, 0x77, // MVI A, $77
             0xfb,       // EI
+            0xc9,       // RET
         );
 
-        //cpu_step(&cpu);
+        RAM_LOAD(ram, 0x0100,
+            0x3e, 0x10, // MVI A, 0x10
+            0x3e, 0x11, // MVI A, 0x11
+            0x3e, 0x12, // MVI A, 0x12
+            0x3e, 0x13, // MVI A, 0x13
+            0x3e, 0x14, // MVI A, 0x14
+            0x3e, 0x15, // MVI A, 0x15
+            0x3e, 0x16, // MVI A, 0x16
+            0x3e, 0x17, // MVI A, 0x17
+            0x3e, 0x18, // MVI A, 0x18
+            0x3e, 0x19, // MVI A, 0x19
+            0x3e, 0x1a, // MVI A, 0x1a
+            0x3e, 0x1b, // MVI A, 0x1b
+            0x3e, 0x1c, // MVI A, 0x1c
+            0x3e, 0x1d, // MVI A, 0x1d
+            0x3e, 0x1e, // MVI A, 0x1e
+            0x3e, 0x1f, // MVI A, 0x1f
+        );
+
+        /* Step normal instruction */
+        cpu.PC = 0x0100;
+        cpu.inte = true;
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
+
+        /* Send IRQ with instruction */
+        ins[0] = 0x3e; // MVI A, 0x99
+        ins[1] = 0x99;
+        ack = cpu_irq(&cpu, ins);
+        TEST_ASSERT_EQ(ack, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x99);
+
+        /* Resend IRQ (not executed) */
+        ack = cpu_irq(&cpu, ins);
+        TEST_ASSERT_EQ(ack, 0);
+        TEST_ASSERT_EQ8(cpu.A, 0x99);
+
+        /* Step after IRQ (continue execution) */
+        cpu_step(&cpu);
+        TEST_ASSERT_EQ8(cpu.A, 0x11);
+
+        /* Reset inte, send another IRQ */
+        ins[0] = 0x3a; // LDA $4000
+        ins[1] = 0x00;
+        ins[2] = 0x40;
+        ram[0x4000] = 0x88;
+        cpu.inte = true;
+        ack = cpu_irq(&cpu, ins);
+        TEST_ASSERT_EQ(ack, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
+
+        /* Resend again (fail) */
+        ack = cpu_irq(&cpu, ins);
+        TEST_ASSERT_EQ(ack, 0);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
+
+        /* Reset inte, send RST instruction */
+        cpu.inte = true;
+        ack = cpu_irq_rst(&cpu, 4);
+        TEST_ASSERT_EQ(ack, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
+        TEST_ASSERT_EQ16(cpu.PC, 0x20);
+
+        /* Resend (fail) */
+        ack = cpu_irq_rst(&cpu, 8);
+        TEST_ASSERT_EQ(ack, 0);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
+        TEST_ASSERT_EQ16(cpu.PC, 0x20);
+
+        /* Step through RST 4 procedure */
+        cpu_step(&cpu); // MVI A, $77
+        TEST_ASSERT_EQ(cpu.inte, 0);
+        TEST_ASSERT_EQ8(cpu.A, 0x77);
+        TEST_ASSERT_EQ16(cpu.PC, 0x22);
+
+        cpu_step(&cpu); // EI
+        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x77);
+        TEST_ASSERT_EQ16(cpu.PC, 0x23);
+
+        cpu_step(&cpu); // RET
+        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x77);
+        TEST_ASSERT_EQ16(cpu.PC, 0x104);
+
+        cpu_step(&cpu); // MVI A, $12 (back to main program)
+        TEST_ASSERT_EQ(cpu.inte, 1);
+        TEST_ASSERT_EQ8(cpu.A, 0x12);
+        TEST_ASSERT_EQ16(cpu.PC, 0x106);
 
     TEST_END;
 }

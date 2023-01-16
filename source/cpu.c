@@ -56,6 +56,7 @@ int cpu_irq(cpu_t *c, data_t instruction[]) {
     if (!c->inte) return 0;
 
     c->inte = false;
+
     c->fetch_data = instruction;
     cpu_step(c);
     c->fetch_data = NULL;
@@ -98,6 +99,8 @@ static void set_flag(cpu_t *c, int f, bool b) {
     else   c->FL &= ~(1 << f); // Set the bit to 0
 }
 
+/* Update the value of zero, sign and parity flag
+    based on the value reg (usually the accumulator) */
 static void update_ZSP(cpu_t *c, data_t reg) {
     set_flag(c, FLAG_Z, reg == 0x00); // Zero
     set_flag(c, FLAG_S, reg  & 0x80); // Sign

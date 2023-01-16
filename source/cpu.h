@@ -62,7 +62,7 @@ void cpu_step(cpu_t*);
 /* Only reset PC and hold/inte */
 void cpu_reset(cpu_t*);
 
-/* Send interrupt with data for one instruction,
+/* Send interrupt with data for one instruction wich is executed,
     return 1 if the irq was acknoledged */
 int cpu_irq(cpu_t*, data_t instruction[]);
 
