@@ -19,8 +19,13 @@
     break
 
 #define TEST_ASSERT_EQ(REG, VAL) \
+    if (REG != VAL) { TEST_FAIL(#REG " is %d instead of %d", REG, VAL); }
+
+#define TEST_ASSERT_EQ8(REG, VAL) \
     if (REG != VAL) { TEST_FAIL(#REG " is $%02x instead of $%02x", REG, VAL); }
 
+#define TEST_ASSERT_EQ16(REG, VAL) \
+    if (REG != VAL) { TEST_FAIL(#REG " is $%04x instead of $%04x", REG, VAL); }
 
 static cpu_t cpu;
 static data_t ram[RAM_SIZE];
@@ -60,14 +65,14 @@ int main(void) {
         ram[0x4000] = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ8(cpu.A, 0xaa);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0xaa);
+        TEST_ASSERT_EQ8(cpu.B, 0xaa);
 
         cpu.H = 0x50; cpu.L = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x5000], 0xaa);
+        TEST_ASSERT_EQ8(ram[0x5000], 0xaa);
 
     TEST_END;
 
@@ -80,12 +85,12 @@ int main(void) {
         cpu.A = 0xaa;
         cpu.B = 0x40; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0xaa);
+        TEST_ASSERT_EQ8(ram[0x4000], 0xaa);
 
         cpu.A = 0xbb;
         cpu.D = 0x50; cpu.E = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x5000], 0xbb);
+        TEST_ASSERT_EQ8(ram[0x5000], 0xbb);
 
     TEST_END;
 
@@ -96,7 +101,7 @@ int main(void) {
 
         cpu.A = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0xaa);
+        TEST_ASSERT_EQ8(ram[0x4000], 0xaa);
     TEST_END;
 
     TEST_BEGIN("LDAX");
@@ -108,12 +113,12 @@ int main(void) {
         ram[0x4000] = 0xaa;
         cpu.B = 0x40; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ8(cpu.A, 0xaa);
 
         ram[0x5000] = 0xbb;
         cpu.D = 0x50; cpu.E = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xbb);
+        TEST_ASSERT_EQ8(cpu.A, 0xbb);
 
     TEST_END;
 
@@ -124,7 +129,7 @@ int main(void) {
 
         ram[0x4000] = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ8(cpu.A, 0xaa);
     TEST_END;
 
     TEST_BEGIN("SHLD");
@@ -134,8 +139,8 @@ int main(void) {
 
         cpu.H = 0xaa; cpu.L = 0xbb;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0xbb);
-        TEST_ASSERT_EQ(ram[0x4001], 0xaa);
+        TEST_ASSERT_EQ8(ram[0x4000], 0xbb);
+        TEST_ASSERT_EQ8(ram[0x4001], 0xaa);
 
     TEST_END;
 
@@ -147,8 +152,8 @@ int main(void) {
         ram[0x4000] = 0xaa;
         ram[0x4001] = 0xbb;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xbb);
-        TEST_ASSERT_EQ(cpu.L, 0xaa);
+        TEST_ASSERT_EQ8(cpu.H, 0xbb);
+        TEST_ASSERT_EQ8(cpu.L, 0xaa);
 
     TEST_END;
 
@@ -165,29 +170,29 @@ int main(void) {
         );
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0xbb);
+        TEST_ASSERT_EQ8(cpu.B, 0xbb);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.C, 0xcc);
+        TEST_ASSERT_EQ8(cpu.C, 0xcc);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0xdd);
+        TEST_ASSERT_EQ8(cpu.D, 0xdd);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.E, 0xee);
+        TEST_ASSERT_EQ8(cpu.E, 0xee);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xff);
+        TEST_ASSERT_EQ8(cpu.H, 0xff);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.L, 0x11);
+        TEST_ASSERT_EQ8(cpu.L, 0x11);
 
         cpu.H = 0x40; cpu.L = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0x99);
+        TEST_ASSERT_EQ8(ram[0x4000], 0x99);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ8(cpu.A, 0xaa);
 
     TEST_END;
 
@@ -200,19 +205,19 @@ int main(void) {
         );
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0xbb);
-        TEST_ASSERT_EQ(cpu.C, 0xcc);
+        TEST_ASSERT_EQ8(cpu.B, 0xbb);
+        TEST_ASSERT_EQ8(cpu.C, 0xcc);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0xdd);
-        TEST_ASSERT_EQ(cpu.E, 0xee);
+        TEST_ASSERT_EQ8(cpu.D, 0xdd);
+        TEST_ASSERT_EQ8(cpu.E, 0xee);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xff);
-        TEST_ASSERT_EQ(cpu.L, 0x11);
+        TEST_ASSERT_EQ8(cpu.H, 0xff);
+        TEST_ASSERT_EQ8(cpu.L, 0x11);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.SP, 0x3344);
+        TEST_ASSERT_EQ16(cpu.SP, 0x3344);
 
     TEST_END;
 
@@ -224,10 +229,10 @@ int main(void) {
         cpu.H = 0xaa; cpu.L = 0xbb;
         cpu.D = 0xdd; cpu.E = 0xee;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xdd);
-        TEST_ASSERT_EQ(cpu.L, 0xee);
-        TEST_ASSERT_EQ(cpu.D, 0xaa);
-        TEST_ASSERT_EQ(cpu.E, 0xbb);
+        TEST_ASSERT_EQ8(cpu.H, 0xdd);
+        TEST_ASSERT_EQ8(cpu.L, 0xee);
+        TEST_ASSERT_EQ8(cpu.D, 0xaa);
+        TEST_ASSERT_EQ8(cpu.E, 0xbb);
 
     TEST_END;
 
@@ -238,7 +243,7 @@ int main(void) {
 
         cpu.H = 0xaa; cpu.L = 0xbb;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.SP, 0xaabb);
+        TEST_ASSERT_EQ16(cpu.SP, 0xaabb);
 
     TEST_END;
 
@@ -250,9 +255,9 @@ int main(void) {
         cpu.D = 0x8f; cpu.E = 0x9d;
         cpu.SP = 0x3a2c;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x3a2b], 0x8f);
-        TEST_ASSERT_EQ(ram[0x3a2a], 0x9d);
-        TEST_ASSERT_EQ(cpu.SP, 0x3a2a);
+        TEST_ASSERT_EQ8(ram[0x3a2b], 0x8f);
+        TEST_ASSERT_EQ8(ram[0x3a2a], 0x9d);
+        TEST_ASSERT_EQ16(cpu.SP, 0x3a2a);
 
     TEST_END;
 
@@ -266,9 +271,9 @@ int main(void) {
         cpu.SP = 0x1239;
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x93);
-        TEST_ASSERT_EQ(cpu.L, 0x3D);
-        TEST_ASSERT_EQ(cpu.SP, 0x123b);
+        TEST_ASSERT_EQ8(cpu.H, 0x93);
+        TEST_ASSERT_EQ8(cpu.L, 0x3D);
+        TEST_ASSERT_EQ16(cpu.SP, 0x123b);
 
     TEST_END;
 
@@ -284,11 +289,11 @@ int main(void) {
         ram[0x10ae] = 0x0d;
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x0d);
-        TEST_ASSERT_EQ(cpu.L, 0xf0);
-        TEST_ASSERT_EQ(ram[0x10ae], 0x0b);
-        TEST_ASSERT_EQ(ram[0x10ad], 0x3c);
-        TEST_ASSERT_EQ(cpu.SP, 0x10ad);
+        TEST_ASSERT_EQ8(cpu.H, 0x0d);
+        TEST_ASSERT_EQ8(cpu.L, 0xf0);
+        TEST_ASSERT_EQ8(ram[0x10ae], 0x0b);
+        TEST_ASSERT_EQ8(ram[0x10ad], 0x3c);
+        TEST_ASSERT_EQ16(cpu.SP, 0x10ad);
 
     TEST_END;
 
@@ -319,10 +324,10 @@ int main(void) {
         }
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.FL, 0x03);
+        TEST_ASSERT_EQ8(cpu.FL, 0x03);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
     TEST_END;
 
@@ -333,7 +338,7 @@ int main(void) {
 
         cpu.A = 0x55;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xaa);
+        TEST_ASSERT_EQ8(cpu.A, 0xaa);
 
     TEST_END;
 
@@ -346,11 +351,11 @@ int main(void) {
 
         cpu_step(&cpu);
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A,  0x9b);
-        TEST_ASSERT_EQ(cpu.FL, 0x82);
+        TEST_ASSERT_EQ8(cpu.A,  0x9b);
+        TEST_ASSERT_EQ8(cpu.FL, 0x82);
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A,  0x01);
-        TEST_ASSERT_EQ(cpu.FL, 0x13);
+        TEST_ASSERT_EQ8(cpu.A,  0x01);
+        TEST_ASSERT_EQ8(cpu.FL, 0x13);
 
     TEST_END;
 
@@ -365,20 +370,20 @@ int main(void) {
         cpu.A = 0x55;
         cpu.FL = 2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A,  0xaa);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.A,  0xaa);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x54);
-        TEST_ASSERT_EQ(cpu.FL, 0x03);
+        TEST_ASSERT_EQ8(cpu.A, 0x54);
+        TEST_ASSERT_EQ8(cpu.FL, 0x03);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x2a);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.A, 0x2a);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x15);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.A, 0x15);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
     TEST_END;
 
@@ -410,74 +415,74 @@ int main(void) {
 
         cpu.FL = 0;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x0050);
+        TEST_ASSERT_EQ16(cpu.PC, 0x0050);
 
         cpu.FL = ~(1U << 6) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x1000);
+        TEST_ASSERT_EQ16(cpu.PC, 0x1000);
 
         cpu.FL = ~(1U << 0) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x1050);
+        TEST_ASSERT_EQ16(cpu.PC, 0x1050);
 
         cpu.FL = ~(1U << 2) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x2000);
+        TEST_ASSERT_EQ16(cpu.PC, 0x2000);
 
         cpu.FL = ~(1U << 7) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x2050);
+        TEST_ASSERT_EQ16(cpu.PC, 0x2050);
 
         cpu.FL = (1U << 6) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x3000);
+        TEST_ASSERT_EQ16(cpu.PC, 0x3000);
 
         cpu.FL = (1U << 0) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x3050);
+        TEST_ASSERT_EQ16(cpu.PC, 0x3050);
 
         cpu.FL = (1U << 2) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4000);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4000);
 
         cpu.FL = (1U << 7) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4050);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4050);
 
 
         /* False condition */
 
         cpu.FL = (1U << 6) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4053);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4053);
 
         cpu.FL = (1U << 0) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4056);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4056);
 
         cpu.FL = (1U << 2) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4059);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4059);
 
         cpu.FL = (1U << 7) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x405c);
+        TEST_ASSERT_EQ16(cpu.PC, 0x405c);
 
         cpu.FL = ~(1U << 6) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x405f);
+        TEST_ASSERT_EQ16(cpu.PC, 0x405f);
 
         cpu.FL = ~(1U << 0) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4062);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4062);
 
         cpu.FL = ~(1U << 2) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4065);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4065);
 
         cpu.FL = ~(1U << 7) & 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.PC, 0x4068);
+        TEST_ASSERT_EQ16(cpu.PC, 0x4068);
 
     TEST_END;
 
@@ -491,22 +496,22 @@ int main(void) {
 
         cpu.B = 0x0a; cpu.C = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0x0b);
-        TEST_ASSERT_EQ(cpu.C, 0x00);
+        TEST_ASSERT_EQ8(cpu.B, 0x0b);
+        TEST_ASSERT_EQ8(cpu.C, 0x00);
 
         cpu.D = 0xff; cpu.E = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0x00);
-        TEST_ASSERT_EQ(cpu.E, 0x00);
+        TEST_ASSERT_EQ8(cpu.D, 0x00);
+        TEST_ASSERT_EQ8(cpu.E, 0x00);
 
         cpu.H = 0x0c; cpu.L = 0xfe;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x0c);
-        TEST_ASSERT_EQ(cpu.L, 0xff);
+        TEST_ASSERT_EQ8(cpu.H, 0x0c);
+        TEST_ASSERT_EQ8(cpu.L, 0xff);
 
         cpu.SP = 0x00ff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.SP, 0x0100);
+        TEST_ASSERT_EQ16(cpu.SP, 0x0100);
 
     TEST_END;
 
@@ -520,22 +525,22 @@ int main(void) {
 
         cpu.B = 0x01; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0x00);
-        TEST_ASSERT_EQ(cpu.C, 0xff);
+        TEST_ASSERT_EQ8(cpu.B, 0x00);
+        TEST_ASSERT_EQ8(cpu.C, 0xff);
 
         cpu.D = 0x00; cpu.E = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0xff);
-        TEST_ASSERT_EQ(cpu.E, 0xff);
+        TEST_ASSERT_EQ8(cpu.D, 0xff);
+        TEST_ASSERT_EQ8(cpu.E, 0xff);
 
         cpu.H = 0x0c; cpu.L = 0xfe;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x0c);
-        TEST_ASSERT_EQ(cpu.L, 0xfd);
+        TEST_ASSERT_EQ8(cpu.H, 0x0c);
+        TEST_ASSERT_EQ8(cpu.L, 0xfd);
 
         cpu.SP = 0x0100;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.SP, 0x00ff);
+        TEST_ASSERT_EQ16(cpu.SP, 0x00ff);
 
     TEST_END;
 
@@ -551,32 +556,32 @@ int main(void) {
 
         cpu.B = 0xab; cpu.C = 0xcd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xab);
-        TEST_ASSERT_EQ(cpu.L, 0xcd);
+        TEST_ASSERT_EQ8(cpu.H, 0xab);
+        TEST_ASSERT_EQ8(cpu.L, 0xcd);
         if (cpu.FL & 0x01) {
             TEST_FAIL("C=%d", cpu.FL & 0x01);
         }
 
         cpu.D = 0x11; cpu.E = 0x22;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0xbc);
-        TEST_ASSERT_EQ(cpu.L, 0xef);
+        TEST_ASSERT_EQ8(cpu.H, 0xbc);
+        TEST_ASSERT_EQ8(cpu.L, 0xef);
         if (cpu.FL & 0x01) {
             TEST_FAIL("C'=%d", cpu.FL & 0x01);
         }
 
         // Shift HL by one
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x79);
-        TEST_ASSERT_EQ(cpu.L, 0xde);
+        TEST_ASSERT_EQ8(cpu.H, 0x79);
+        TEST_ASSERT_EQ8(cpu.L, 0xde);
         if (!(cpu.FL & 0x01)) {
             TEST_FAIL("C''=%d", cpu.FL & 0x01);
         }
 
         cpu.SP = 0x1fff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x99);
-        TEST_ASSERT_EQ(cpu.L, 0xdd);
+        TEST_ASSERT_EQ8(cpu.H, 0x99);
+        TEST_ASSERT_EQ8(cpu.L, 0xdd);
         if (cpu.FL & 0x01) {
             TEST_FAIL("C'''=%d", cpu.FL & 0x01);
         }
@@ -597,44 +602,44 @@ int main(void) {
 
         cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0x01);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.B, 0x01);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
         cpu.C = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.C, 0x00);
-        TEST_ASSERT_EQ(cpu.FL, 0x56);
+        TEST_ASSERT_EQ8(cpu.C, 0x00);
+        TEST_ASSERT_EQ8(cpu.FL, 0x56);
 
         cpu.D = 0x1f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0x20);
-        TEST_ASSERT_EQ(cpu.FL, 0x12);
+        TEST_ASSERT_EQ8(cpu.D, 0x20);
+        TEST_ASSERT_EQ8(cpu.FL, 0x12);
 
         cpu.E = 0x80;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.E, 0x81);
-        TEST_ASSERT_EQ(cpu.FL, 0x86);
+        TEST_ASSERT_EQ8(cpu.E, 0x81);
+        TEST_ASSERT_EQ8(cpu.FL, 0x86);
 
         cpu.H = 0x7f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x80);
-        TEST_ASSERT_EQ(cpu.FL, 0x92);
+        TEST_ASSERT_EQ8(cpu.H, 0x80);
+        TEST_ASSERT_EQ8(cpu.FL, 0x92);
 
         cpu.L = 0x0e;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.L, 0x0f);
-        TEST_ASSERT_EQ(cpu.FL, 0x06);
+        TEST_ASSERT_EQ8(cpu.L, 0x0f);
+        TEST_ASSERT_EQ8(cpu.FL, 0x06);
 
         ram[0x4000] = 0x10;
         cpu.H = 0x40; cpu.L = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0x11);
-        TEST_ASSERT_EQ(cpu.FL, 0x06);
+        TEST_ASSERT_EQ8(ram[0x4000], 0x11);
+        TEST_ASSERT_EQ8(cpu.FL, 0x06);
 
         cpu.A = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
-        TEST_ASSERT_EQ(cpu.FL, 0x12);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.FL, 0x12);
 
     TEST_END;
 
@@ -652,44 +657,44 @@ int main(void) {
 
         cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.B, 0xff);
-        TEST_ASSERT_EQ(cpu.FL, 0x86);
+        TEST_ASSERT_EQ8(cpu.B, 0xff);
+        TEST_ASSERT_EQ8(cpu.FL, 0x86);
 
         cpu.C = 0xff;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.C, 0xfe);
-        TEST_ASSERT_EQ(cpu.FL, 0x92);
+        TEST_ASSERT_EQ8(cpu.C, 0xfe);
+        TEST_ASSERT_EQ8(cpu.FL, 0x92);
 
         cpu.D = 0x1f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.D, 0x1e);
-        TEST_ASSERT_EQ(cpu.FL, 0x16);
+        TEST_ASSERT_EQ8(cpu.D, 0x1e);
+        TEST_ASSERT_EQ8(cpu.FL, 0x16);
 
         cpu.E = 0x80;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.E, 0x7f);
-        TEST_ASSERT_EQ(cpu.FL, 0x02);
+        TEST_ASSERT_EQ8(cpu.E, 0x7f);
+        TEST_ASSERT_EQ8(cpu.FL, 0x02);
 
         cpu.H = 0x7f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.H, 0x7e);
-        TEST_ASSERT_EQ(cpu.FL, 0x16);
+        TEST_ASSERT_EQ8(cpu.H, 0x7e);
+        TEST_ASSERT_EQ8(cpu.FL, 0x16);
 
         cpu.L = 0x0e;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.L, 0x0d);
-        TEST_ASSERT_EQ(cpu.FL, 0x12);
+        TEST_ASSERT_EQ8(cpu.L, 0x0d);
+        TEST_ASSERT_EQ8(cpu.FL, 0x12);
 
         ram[0x4000] = 0x10;
         cpu.H = 0x40; cpu.L = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x4000], 0x0f);
-        TEST_ASSERT_EQ(cpu.FL, 0x06);
+        TEST_ASSERT_EQ8(ram[0x4000], 0x0f);
+        TEST_ASSERT_EQ8(cpu.FL, 0x06);
 
         cpu.A = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0e);
-        TEST_ASSERT_EQ(cpu.FL, 0x12);
+        TEST_ASSERT_EQ8(cpu.A, 0x0e);
+        TEST_ASSERT_EQ8(cpu.FL, 0x12);
 
     TEST_END;
 
@@ -708,41 +713,41 @@ int main(void) {
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0f);
+        TEST_ASSERT_EQ8(cpu.A, 0x0f);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xf0);
+        TEST_ASSERT_EQ8(cpu.A, 0xf0);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x32);
+        TEST_ASSERT_EQ8(cpu.A, 0x32);
 
         cpu.A = 0xaa; 
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x88);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
 
         cpu.A = 0xcc;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xcc);
+        TEST_ASSERT_EQ8(cpu.A, 0xcc);
 
         cpu.A = 0x41;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x40);
+        TEST_ASSERT_EQ8(cpu.A, 0x40);
 
     TEST_END;
 
@@ -761,41 +766,41 @@ int main(void) {
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xf1);
+        TEST_ASSERT_EQ8(cpu.A, 0xf1);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xf3);
+        TEST_ASSERT_EQ8(cpu.A, 0xf3);
 
         cpu.A = 0xaa; 
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0xcc;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xcc);
+        TEST_ASSERT_EQ8(cpu.A, 0xcc);
 
         cpu.A = 0x41;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x5b);
+        TEST_ASSERT_EQ8(cpu.A, 0x5b);
 
     TEST_END;
 
@@ -814,41 +819,41 @@ int main(void) {
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xf0);
+        TEST_ASSERT_EQ8(cpu.A, 0xf0);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x01);
+        TEST_ASSERT_EQ8(cpu.A, 0x01);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xc1);
+        TEST_ASSERT_EQ8(cpu.A, 0xc1);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x77);
+        TEST_ASSERT_EQ8(cpu.A, 0x77);
 
         cpu.A = 0xcc;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x41;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x1b);
+        TEST_ASSERT_EQ8(cpu.A, 0x1b);
 
     TEST_END;
 
@@ -867,41 +872,41 @@ int main(void) {
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0e);
+        TEST_ASSERT_EQ8(cpu.A, 0x0e);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xe1);
+        TEST_ASSERT_EQ8(cpu.A, 0xe1);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x25);
+        TEST_ASSERT_EQ8(cpu.A, 0x25);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x87);
+        TEST_ASSERT_EQ8(cpu.A, 0x87);
 
         cpu.A = 0xcc;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x98);
+        TEST_ASSERT_EQ8(cpu.A, 0x98);
 
         cpu.A = 0x41;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x9b);
+        TEST_ASSERT_EQ8(cpu.A, 0x9b);
 
     TEST_END;
 
@@ -920,41 +925,41 @@ int main(void) {
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xab);
+        TEST_ASSERT_EQ8(cpu.A, 0xab);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xf0);
+        TEST_ASSERT_EQ8(cpu.A, 0xf0);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x41);
+        TEST_ASSERT_EQ8(cpu.A, 0x41);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xcd);
+        TEST_ASSERT_EQ8(cpu.A, 0xcd);
 
         cpu.A = 0xcc;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x41;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xe7);
+        TEST_ASSERT_EQ8(cpu.A, 0xe7);
 
     TEST_END;
 
@@ -974,49 +979,49 @@ int main(void) {
         cpu.A = 0x00; cpu.B = 0x00;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x01);
+        TEST_ASSERT_EQ8(cpu.A, 0x01);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x10);
+        TEST_ASSERT_EQ8(cpu.A, 0x10);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0e);
+        TEST_ASSERT_EQ8(cpu.A, 0x0e);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xe2);
+        TEST_ASSERT_EQ8(cpu.A, 0xe2);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x25);
+        TEST_ASSERT_EQ8(cpu.A, 0x25);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x88);
+        TEST_ASSERT_EQ8(cpu.A, 0x88);
 
         cpu.A = 0xcc;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x98);
+        TEST_ASSERT_EQ8(cpu.A, 0x98);
 
         cpu.A = 0x41;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x9c);
+        TEST_ASSERT_EQ8(cpu.A, 0x9c);
 
     TEST_END;
 
@@ -1036,115 +1041,122 @@ int main(void) {
         cpu.A = 0x00; cpu.B = 0x00;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A, 0x00);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0f);
+        TEST_ASSERT_EQ8(cpu.A, 0x0f);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xab);
+        TEST_ASSERT_EQ8(cpu.A, 0xab);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xef);
+        TEST_ASSERT_EQ8(cpu.A, 0xef);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x40);
+        TEST_ASSERT_EQ8(cpu.A, 0x40);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xcc);
+        TEST_ASSERT_EQ8(cpu.A, 0xcc);
 
         cpu.A = 0xcc;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A, 0xff);
 
         cpu.A = 0x41;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xe6);
+        TEST_ASSERT_EQ8(cpu.A, 0xe6);
 
     TEST_END;
 
-#if 0
     TEST_BEGIN("CMP");
         RAM_LOAD(ram, 0x0000,
-            0x98,       // SBB B
-            0x99,       // SBB C
-            0x9a,       // SBB D
-            0x9b,       // SBB E
-            0x9c,       // SBB H
-            0x9d,       // SBB L
-            0x9e,       // SBB M
-            0x9f,       // SBB A
-            0xde, 0x5a, // SBI $5a
+            0xb8,       // CMP B
+            0xb9,       // CMP C
+            0xba,       // CMP D
+            0xbb,       // CMP E
+            0xbc,       // CMP H
+            0xbd,       // CMP L
+            0xbe,       // CMP M
+            0xbf,       // CMP A
+            0xfe, 0x5a, // CPI $5a
         );
 
         cpu.A = 0x00; cpu.B = 0x00;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x00);
+        TEST_ASSERT_EQ8(cpu.A,  0x00);
+        TEST_ASSERT_EQ8(cpu.FL, 0x56);
 
         cpu.A = 0x10; cpu.C = 0x00;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x0f);
+        TEST_ASSERT_EQ8(cpu.A,  0x10);
+        TEST_ASSERT_EQ8(cpu.FL, 0x12);
 
         cpu.A = 0x55; cpu.D = 0xaa;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xab);
+        TEST_ASSERT_EQ8(cpu.A,  0x55);
+        TEST_ASSERT_EQ8(cpu.FL, 0x83);
 
         cpu.A = 0xff; cpu.E = 0x0f;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xef);
+        TEST_ASSERT_EQ8(cpu.A,  0xff);
+        TEST_ASSERT_EQ8(cpu.FL, 0x96);
 
         cpu.A = 0xf0; cpu.H = 0xf1;
         cpu.FL = 0x02;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A,  0xf0);
+        TEST_ASSERT_EQ8(cpu.FL, 0x87);
 
         cpu.A = 0x33; cpu.L = 0xf2;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x40);
+        TEST_ASSERT_EQ8(cpu.A,  0x33);
+        TEST_ASSERT_EQ8(cpu.FL, 0x17);
 
         cpu.A = 0xaa;
         cpu.H = 0x40; cpu.L = 0x00;
         ram[0x4000] = 0xdd;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xcc);
+        TEST_ASSERT_EQ8(cpu.A,  0xaa);
+        TEST_ASSERT_EQ8(cpu.FL, 0x83);
 
         cpu.A = 0xcc;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xff);
+        TEST_ASSERT_EQ8(cpu.A,  0xcc);
+        TEST_ASSERT_EQ8(cpu.FL, 0x56);
 
         cpu.A = 0x41;
         cpu.FL = 0x03;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0xe6);
+        TEST_ASSERT_EQ8(cpu.A,  0x41);
+        TEST_ASSERT_EQ8(cpu.FL, 0x87);
 
     TEST_END;
-#endif
 
     TEST_BEGIN("IN-OUT");
         RAM_LOAD(ram, 0x0000,
@@ -1154,11 +1166,23 @@ int main(void) {
 
         ram[0x80] = 0x99;
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(cpu.A, 0x99);
+        TEST_ASSERT_EQ8(cpu.A, 0x99);
 
         cpu_step(&cpu);
-        TEST_ASSERT_EQ(ram[0x81], 0x99);
+        TEST_ASSERT_EQ8(ram[0x81], 0x99);
 
     TEST_END;
 
+    TEST_BEGIN("IRQ");
+
+        /* Load RST n procedures */
+        for (int i = 0; i < 8; i++)
+        RAM_LOAD(ram, i*8,
+            0x3e, i,    // MVI A, i
+            0xfb,       // EI
+        );
+
+        //cpu_step(&cpu);
+
+    TEST_END;
 }
