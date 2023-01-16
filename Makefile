@@ -1,22 +1,20 @@
 include config.mk
 
 # Sub systems
-MODULES = source
+MODULES = main emul socktest
 
 .PHONY: all clean $(MODULES) runtest $(TESTS)
 all : $(MODULES)
 
 # Sub sustems deps
-main : machine
+main : emul
 
-run : source
-	rlwrap bin/source/sim
+# Commands / shortcuts
+run : main
+	rlwrap bin/main/main
 
-test: source
-	bin/source/test
-
-utest: source
-	bin/source/utest
+test: emul
+	bin/emul/test
 
 # Gen modules
 $(MODULES) :

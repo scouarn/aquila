@@ -15,9 +15,13 @@ typedef uint8_t  port_t;
 #define RAM_SIZE 0x10000
 #define MAX_PORT 256
 
+#define RAM_LOAD_ARR(RAM, OFF, ARR) do {    \
+    memcpy(RAM+OFF, ARR, sizeof(ARR));      \
+} while (0)
+
 #define RAM_LOAD(RAM, OFF, ...) do {        \
     const data_t prog[] = { __VA_ARGS__ };  \
-    memcpy(RAM+OFF, prog, sizeof(prog));    \
+    RAM_LOAD_ARR(RAM, OFF, prog);           \
 } while (0)
 
 #define RAM_LOAD_FILE(RAM, OFF, FP) \
