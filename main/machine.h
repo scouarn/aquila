@@ -1,5 +1,5 @@
-#ifndef IO_H
-#define IO_H
+#ifndef MACHINE_H
+#define MACHINE_H
 
 #include "emul/cpu.h"
 

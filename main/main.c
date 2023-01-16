@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "emul/cpu.h"
-#include "bdos.h"
+#include "asm.h"
 #include "machine.h"
 
 #define LOAD_ADDR 0x0100

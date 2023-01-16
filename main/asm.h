@@ -1,7 +1,7 @@
 #ifndef BDOS_H
 #define BDOS_H
 
-#include "io.h"
+#include "machine.h"
 
 static data_t BDOS_PROG[] = {
 
