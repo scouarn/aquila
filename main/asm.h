@@ -4,7 +4,7 @@
 #include "machine.h"
 
 static data_t BDOS_PROG[] = {
-
+// $0000:
         0x76,               // HLT
         0x00, 0x00,         // NOP
         0x00, 0x00,

@@ -3,7 +3,7 @@
 
 #include "emul/cpu.h"
 
-#define TTY_PORT 0
+#define TTY_PORT 1
 
 /* Defining the machine */
 extern cpu_t cpu;

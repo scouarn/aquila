@@ -17,25 +17,42 @@ void store(addr_t addr, data_t data) {
 data_t input(port_t port) {
 
     switch(port) {
-        case TTY_PORT: {
+        case 0: return 0x02;
+
+        case 1: {
             int c = fgetc(stdin);
-            return c != EOF ? c : 0x00;
+
+            if (c == EOF) return 0x00;
+
+            /* Translate LF to CR */
+            if (c == '\n') return '\r';
+
+            return c;
         }
 
-        default: return 0x00;
+        default:
+            //printf("In %d\n", port);
+        return 0x00;
     }
 
 }
 
 void output(port_t port, data_t data) {
     switch(port) {
-        case TTY_PORT:
-            fputc(data, stdout);
-            if (isatty(STDOUT_FILENO))
+
+        case 1:
+            if (isatty(STDOUT_FILENO)) {
+                fputc(data & 0x7f, stdout);
                 fflush(stdout);
+            }
+            else {
+                fputc(data, stdout);
+            }
         break;
 
-        default: break;
+        default:
+            //printf("Out %d\n", port);
+        break;
     }
 }
 
