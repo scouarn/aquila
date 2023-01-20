@@ -8,24 +8,9 @@ typedef uint16_t addr_t;
 typedef uint8_t  data_t;
 typedef uint8_t  port_t;
 
-#define HI_BYTE(X) ((X >> 8) & 0xff)
-#define LO_BYTE(X) (X & 0xff)
-#define WORD(H, L) ((H << 8) | L)
-
-#define RAM_SIZE 0x10000
-#define MAX_PORT 256
-
-#define RAM_LOAD_ARR(RAM, OFF, ARR) do {    \
-    memcpy(RAM+OFF, ARR, sizeof(ARR));      \
-} while (0)
-
-#define RAM_LOAD(RAM, OFF, ...) do {        \
-    const data_t prog[] = { __VA_ARGS__ };  \
-    RAM_LOAD_ARR(RAM, OFF, prog);           \
-} while (0)
-
-#define RAM_LOAD_FILE(RAM, OFF, FP) \
-    fread(RAM+OFF, 1, sizeof(RAM)-OFF, FP);
+#define HI_BYTE(X) ((data_t)(X >> 8))
+#define LO_BYTE(X) ((data_t)X)
+#define WORD(H, L) ((addr_t)(H << 8) | L)
 
 #define FLAG_C 0x01
 #define FLAG_P 0x04
@@ -33,52 +18,77 @@ typedef uint8_t  port_t;
 #define FLAG_Z 0x40
 #define FLAG_S 0x80
 
-/* State of a 8080 CPU */
-typedef struct cpu_t {
+/* The bit which is always 1 and the bits which are always 0 */
+#define ENFORCE_FLAGS() do {            \
+    cpu_FL |= 2;                        \
+    cpu_FL &= 0xd7;                     \
+} while (0)
 
-    /* Acc and flags */
-    data_t A, FL;
 
-    /* General purpose registers */
-    data_t B, C, D, E, H, L;
+/* Register bank assuming little endian */
+extern struct s_cpu_regs {
+
+    union { /* A and FL */
+        addr_t PSW;
+        struct { data_t FL, A; } _rp;
+    } _psw;
+
+    union { /* B and C */
+        addr_t BC;
+        struct { data_t C, B; } _rp;
+    } _bc;
+
+    union { /* D and E */
+        addr_t DE;
+        struct { data_t E, D; } _rp;
+    } _de;
+
+    union { /* H and L */
+        addr_t HL;
+        struct { data_t L, H; } _rp;
+    } _hl;
 
     /* Program counter and stack pointer */
-    addr_t PC, SP;
+    addr_t PC, reg_SP; // SP is a defined macro
 
-    /* hold/halt and interrupt enable bits */
-    bool hold, inte;
+} cpu_regs;
 
-    /* If not NULL, instructions will be fetched from this pointer,
-        used for interrupt requests */
-    data_t *fetch_data;
+#define cpu_A   cpu_regs._psw._rp.A
+#define cpu_FL  cpu_regs._psw._rp.FL
+#define cpu_PSW cpu_regs._psw.PSW
+#define cpu_B   cpu_regs._bc._rp.B
+#define cpu_C   cpu_regs._bc._rp.C
+#define cpu_BC  cpu_regs._bc.BC
+#define cpu_D   cpu_regs._de._rp.D
+#define cpu_E   cpu_regs._de._rp.E
+#define cpu_DE  cpu_regs._de.DE
+#define cpu_H   cpu_regs._hl._rp.H
+#define cpu_L   cpu_regs._hl._rp.L
+#define cpu_HL  cpu_regs._hl.HL
+#define cpu_PC  cpu_regs.PC
+#define cpu_SP  cpu_regs.reg_SP
 
-    /* Number of cycles from last cpu_reset */
-    uint64_t cycles;
 
-    /* Memory and IO */
-    void   (*store)  (addr_t, data_t);
-    void   (*output) (port_t, data_t);
-    data_t (*load)   (addr_t);
-    data_t (*input)  (port_t);
+/* hold/halt and interrupt enable bits */
+extern bool cpu_hold, cpu_inte;
 
-} cpu_t;
+/* Number of cycles from last cpu_reset */
+extern uint64_t cycles;
 
-/* Display registers */
-void cpu_dump(cpu_t *c, FILE *fp);
 
 /* One instruction */
-void cpu_step(cpu_t*);
+void cpu_step(void);
 
 /* Only reset PC and hold/inte */
-void cpu_reset(cpu_t*);
+void cpu_reset(void);
 
 /* Send interrupt with data for one instruction wich is executed,
     return 1 if the irq was acknoledged */
-int cpu_irq(cpu_t*, data_t instruction[]);
+int cpu_irq(data_t instruction[]);
 
 /* Send interrupt with a RST instruction,
     the code must be <= 7,
     return 1 if the irq was acknoledged */
-int cpu_irq_rst(cpu_t*, unsigned int code);
+int cpu_irq_rst(uint8_t code);
 
 #endif

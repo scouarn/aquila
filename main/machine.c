@@ -1,23 +1,29 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "machine.h"
+#include "emul/io.h"
 
-cpu_t  cpu;
-data_t ram[RAM_SIZE];
+data_t io_ram[RAM_SIZE];
 
-data_t load(addr_t addr) {
-    return ram[addr];
+data_t io_load(addr_t addr) {
+#if RAM_SIZE < 0xffff
+    if (addr >= RAM_SIZE) return 0x00;
+#endif
+
+    return io_ram[addr];
 }
 
-void store(addr_t addr, data_t data) {
-    ram[addr] = data;
+void io_store(addr_t addr, data_t data) {
+#if RAM_SIZE < 0xffff
+    if (addr >= RAM_SIZE) return;
+#endif
+    io_ram[addr] = data;
 }
 
-data_t input(port_t port) {
+data_t io_input(port_t port) {
 
     switch(port) {
-        case 0: return 0x02;
+        case 0: return 0x00;
 
         case 1: {
             int c = fgetc(stdin);
@@ -30,14 +36,12 @@ data_t input(port_t port) {
             return c;
         }
 
-        default:
-            //printf("In %d\n", port);
-        return 0x00;
+        default: return 0x00;
     }
 
 }
 
-void output(port_t port, data_t data) {
+void io_output(port_t port, data_t data) {
     switch(port) {
 
         case 1:
@@ -50,9 +54,7 @@ void output(port_t port, data_t data) {
             }
         break;
 
-        default:
-            //printf("Out %d\n", port);
-        break;
+        default: break;
     }
 }
 

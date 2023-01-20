@@ -9,9 +9,11 @@
 #include <unistd.h>
 
 #include "emul/cpu.h"
-#include "machine.h"
+#include "emul/io.h"
 
-#define LOAD_ADDR 0x0000
+#include "bdos.h"
+
+#define LOAD_ADDR 0x0100
 
 int main(int argc, char **argv) {
 
@@ -25,12 +27,11 @@ int main(int argc, char **argv) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
     /* Init machine */
-    cpu.load   = load;
-    cpu.store  = store;
-    cpu.input  = input;
-    cpu.output = output;
-    cpu_reset(&cpu);
-    cpu.PC = LOAD_ADDR;
+    cpu_reset();
+    cpu_PC = LOAD_ADDR;
+
+    /* Load BDOS */
+    RAM_LOAD_ARR(0x0000, BDOS);
 
     /* Open ROM file */
     FILE *fimg = fopen(argv[1], "r");
@@ -38,19 +39,18 @@ int main(int argc, char **argv) {
         perror("** Cannot load ROM");
         goto usage;
     }
-
+  
     /* Load ROM */
-    size_t loaded = RAM_LOAD_FILE(ram, LOAD_ADDR, fimg);
-    fprintf(stderr, "** Loaded %zu bytes from %s\n", loaded, argv[1]);
+    size_t loaded = RAM_LOAD_FILE(LOAD_ADDR, fimg);
+    fprintf(stdout, "** Loaded %zu bytes from %s\r\n", loaded, argv[1]);
     fclose(fimg);
 
     /* Run */
     while (1) { // TODO: frequency
-        fprintf(stderr, "PC $%04x\n", cpu.PC);
-        cpu_step(&cpu);
+        cpu_step();
 
-        if (cpu.hold) {
-            fprintf(stderr, "** Halted\n");
+        if (cpu_hold) {
+            fprintf(stdout, "** Halted\r\n");
             break;
         }
     }

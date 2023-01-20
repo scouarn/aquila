@@ -1,17 +1,28 @@
 include config.mk
 
 # Sub systems
-MODULES = main emul socktest
+MODULES = main emul socktest avr
 
-.PHONY: all clean $(MODULES) runtest $(TESTS)
+.PHONY: all clean upload $(MODULES) $(TESTS)
 all : $(MODULES)
 
+# Make submodule $1 with rule $2
+define make_module
+	$(MAKE) -C $1 $2 \
+		CURMODULE=$1 \
+		--no-print-directory \
+		-E 'include $(PWD)/config.mk'
+endef
+
 # Sub sustems deps
-main : emul
+main: emul
 
 # Commands / shortcuts
-run : main
+run: main
 	rlwrap bin/main/main
+
+upload:
+	@$(call make_module,avr,upload)
 
 test: emul
 	bin/emul/test
@@ -20,10 +31,7 @@ test: emul
 $(MODULES) :
 	@echo
 	@echo ==== MAKING $@ ====
-	@$(MAKE) -C $@ \
-		CURMODULE=$@ \
-		--no-print-directory \
-		-E 'include $(PWD)/config.mk'
+	@$(call make_module,$@,)
 
 # Cleaning
 clean :
