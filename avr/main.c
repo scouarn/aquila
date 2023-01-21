@@ -13,7 +13,6 @@ int main(void) {
     /* Init emulator */
     io_serial_init();
     cpu_reset();
-    cpu_PC = 0x0100;
 
     /* Enable output pin 13 */
     DDRB |= _BV(PORTB7);
