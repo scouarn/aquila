@@ -9,7 +9,7 @@
 // https://www.autometer.de/unix4fun/z80pack/ftp/manuals/Intel/8080_8085_asm_Nov78.pdf
 
 struct s_cpu_regs cpu_regs;
-bool cpu_hold, cpu_inte;
+bool cpu_hold, cpu_inte, cpu_wait;
 uint64_t cycles;
 
 /* If not NULL, instructions will be fetched from this pointer,
@@ -31,7 +31,7 @@ static data_t *fetch_data;
 void cpu_reset(void) {
     ENFORCE_FLAGS();
     cpu_PC = 0;
-    cpu_hold = cpu_inte = false;
+    cpu_hold = cpu_inte = cpu_wait = false;
     fetch_data = NULL;
     cycles = 0;
 }

@@ -18,7 +18,7 @@ void io_store(addr_t addr, data_t data) {
 }
 
 data_t io_input(port_t port) {
-    PORTB |= _BV(PORTB7);
+    cpu_wait = true;
     data_t data = 0x00;
 
     switch (port) {
@@ -50,12 +50,12 @@ data_t io_input(port_t port) {
         default: break;
     }
 
-    PORTB &= ~_BV(PORTB7);
+    cpu_wait = false;
     return data;
 }
 
 void io_output(port_t port, data_t data) {
-    PORTB |= _BV(PORTB7);
+    cpu_wait = true;
 
     switch (port) {
 
@@ -75,7 +75,7 @@ void io_output(port_t port, data_t data) {
         default: break;
     }
 
-    PORTB &= ~_BV(PORTB7);
+    cpu_wait = false;
 }
 
 

@@ -70,7 +70,7 @@ extern struct s_cpu_regs {
 
 
 /* hold/halt and interrupt enable bits */
-extern bool cpu_hold, cpu_inte;
+extern bool cpu_hold, cpu_inte, cpu_wait;
 
 /* Number of cycles from last cpu_reset */
 extern uint64_t cycles;
