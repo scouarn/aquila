@@ -108,7 +108,7 @@ ISR(TIMER1_OVF_vect) {
 
     /* Read the state of the CPU and buses */
     switch (curr_nib) {
-        case STAT_NIB_0: val = (cpu_hold << 3) | (cpu_wait << 2); break;
+        case STAT_NIB_0: val = (cpu_hold << 3) | (!cpu_ready << 2); break;
         case DATA_NIB_0: val = io_data_bus >>  0; break;
         case DATA_NIB_1: val = io_data_bus >>  4; break;
         case ADDR_NIB_0: val = io_addr_bus >>  0; break;
@@ -174,6 +174,8 @@ ISR (INT3_vect) {
 
     // FIXME: is it safe ? This is an ISR after the CPU got halted,
     // so it shouldn't be currently executing stuff
+    // FIXME: When executing IO instruction and waits the LEDs aren't updated
+    // since interrupts in the host are disabled
     if (cpu_hold) {
         cpu_hold = false;
         cpu_step();

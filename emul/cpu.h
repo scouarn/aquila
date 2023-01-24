@@ -59,10 +59,9 @@ extern struct s_cpu_regs {
         Setting reset and stepping resets PC, inte, cycles and
         reset is set back to false
 
-        Wait does nothing and is juste an indicator
+        ready does nothing and is juste an indicator
         set by io which does the waiting */
-        //FIXME: ready instead of wait
-    bool wait, reset;
+    bool ready, reset;
 
     /* Number of cycles from last reset */
     uint64_t cycles;
@@ -70,7 +69,7 @@ extern struct s_cpu_regs {
     /* Set to request an interrupt, instructions
         will be fetched from this pointer */
     data_t *irq_data;
-    bool irq_ack; // FIXME
+    bool irq_ack;
 
 } cpu_state;
 
@@ -94,7 +93,7 @@ void cpu_step(void);
 
 #define cpu_hold  cpu_state.hold
 #define cpu_inte  cpu_state.inte
-#define cpu_wait  cpu_state.wait
+#define cpu_ready cpu_state.ready
 #define cpu_reset cpu_state.reset
 
 #define cpu_cycles   cpu_state.cycles

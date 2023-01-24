@@ -28,7 +28,6 @@ void io_store(addr_t addr, data_t data) {
 }
 
 data_t io_input(port_t port) {
-    cpu_wait = true;
     io_addr_bus = (port << 8) | port; // According to datasheet
 
     switch (port) {
@@ -51,8 +50,10 @@ data_t io_input(port_t port) {
 
         case SIO_DATA_PORT:
             /* Wait until there is data to read */
-            // FIXME: sometimes Basic still waits -> check ASM
-            while ((UCSR0A & _BV(RXC0)) == 0) {}
+            while ((UCSR0A & _BV(RXC0)) == 0) {
+                cpu_ready = false;
+            }
+            cpu_ready = true;
 
             /* Receive */
             io_data_bus = UDR0;
@@ -65,12 +66,10 @@ data_t io_input(port_t port) {
         default: break;
     }
 
-    cpu_wait = false;
     return io_data_bus;
 }
 
 void io_output(port_t port, data_t data) {
-    cpu_wait = true;
     io_addr_bus = (port << 8) | port; // According to datasheet
     io_data_bus = data;
 
@@ -83,7 +82,10 @@ void io_output(port_t port, data_t data) {
 
         case SIO_DATA_PORT:
             /* Wait until there is space to write */
-            while ((UCSR0A & _BV(UDRE0)) == 0) {}
+            while ((UCSR0A & _BV(UDRE0)) == 0) {
+                cpu_ready = false;
+            }
+            cpu_ready = true;
 
             /* Send: chop the msbit because 4k basic does things to them */
             UDR0 = data & 0x7f;
@@ -96,7 +98,6 @@ void io_output(port_t port, data_t data) {
         default: break;
     }
 
-    cpu_wait = false;
 }
 
 
