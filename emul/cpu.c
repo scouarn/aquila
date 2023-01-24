@@ -22,34 +22,34 @@ struct s_cpu_regs cpu_state;
 #define COND_PO  (!COND_PE)
 #define COND_P   (!COND_M)
 
-int cpu_irq(data_t instruction[]) {
-    if (!cpu_inte) return 0;
-
-    cpu_inte = false;
-
-    cpu_fetch_data = instruction;
-    cpu_step();
-    cpu_fetch_data = NULL;
-
-    return 1;
-}
-
-int cpu_irq_rst(uint8_t code) {
-    if (code > 7) return 0;
-
-    /* RST code */
-    data_t instruction = 0xc7 | (code << 3);
-
-    return cpu_irq(&instruction);
-}
+//int cpu_irq(data_t instruction[]) {
+//    if (!cpu_inte) return 0;
+//
+//    cpu_inte = false;
+//
+//    cpu_irq_data = instruction;
+//    cpu_step();
+//    cpu_irq_data = NULL;
+//
+//    return 1;
+//}
+//
+//int cpu_irq_rst(uint8_t code) {
+//    if (code > 7) return 0;
+//
+//    /* RST code */
+//    data_t instruction = 0xc7 | (code << 3);
+//
+//    return cpu_irq(&instruction);
+//}
 
 /* Get next byte */
 static data_t fetch() {
 
     /* Fetch interrupt instruction */
-    if (cpu_fetch_data != NULL) {
-        data_t data = *cpu_fetch_data;
-        cpu_fetch_data++;
+    if (cpu_irq_data != NULL) {
+        data_t data = *cpu_irq_data;
+        cpu_irq_data++;
         return data;
     }
 
@@ -333,7 +333,7 @@ void cpu_step(void) {
     /* Reset request */
     if (cpu_reset) {
         ENFORCE_FLAGS();
-        cpu_inte = cpu_reset = false;
+        cpu_inte = cpu_reset = cpu_irq_ack = false;
         cpu_PC = 0;
         cpu_cycles = 0;
 
@@ -344,13 +344,22 @@ void cpu_step(void) {
     }
 
     /* Handle interrupt request */
-    if (cpu_fetch_data) {
-        // TODO: implement...
-        return;
+    else if (cpu_irq_data != NULL) {
+
+        if (cpu_inte) {
+            cpu_inte = false;
+            cpu_irq_ack = true;
+        }
+        else {
+            cpu_irq_ack = false;
+            cpu_irq_data = NULL; // Reset so it doesn't get executed
+        }
+
+        /* CONTINUE EXECUTION */
     }
 
     /* Check if halted */
-    if (cpu_hold) {
+    else if (cpu_hold) {
         //cpu_cycles += 1;
         return;
     }
@@ -621,4 +630,6 @@ void cpu_step(void) {
         case 0xff: RST(7);                              break; // RST 7
     }
 
+    /* Reset irq when done */
+    cpu_irq_data = NULL;
 }

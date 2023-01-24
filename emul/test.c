@@ -1144,7 +1144,6 @@ int main(void) {
     // TODO tests for PCHL RET CALL RST
     TEST_BEGIN("IRQ");
         data_t ins[3];
-        int ack;
 
         /* RST 4 procedure */
         RAM_LOAD(0x0020,
@@ -1155,9 +1154,11 @@ int main(void) {
 
         /* Main program */
         RAM_LOAD(0x0100,
-            0x3e, 0x10, // MVI A, 0x10
-            0x3e, 0x11, // MVI A, 0x11
-            0x3e, 0x12, // MVI A, 0x12
+            0x3e, 0x10, // MVI A, $10
+            0x3e, 0x11, // MVI A, $11
+            0x3e, 0x12, // MVI A, $12
+            0x3e, 0x13, // MVI A, $13
+            0x3e, 0x14, // MVI A, $14
         );
 
         /* Step normal instruction */
@@ -1165,22 +1166,28 @@ int main(void) {
         cpu_inte = true;
         cpu_step();
         TEST_ASSERT_EQ8(cpu_A, 0x10);
+        TEST_ASSERT_EQ16(cpu_PC, 0x102);
 
         /* Send IRQ with instruction */
-        ins[0] = 0x3e; // MVI A, 0x99
+        ins[0] = 0x3e; // MVI A, $99
         ins[1] = 0x99;
-        ack = cpu_irq(ins);
-        TEST_ASSERT_EQ(ack, 1);
+        cpu_irq_data = ins;
+        cpu_step();
+        TEST_ASSERT_EQ(cpu_irq_ack, 1);
         TEST_ASSERT_EQ8(cpu_A, 0x99);
+        TEST_ASSERT_EQ16(cpu_PC, 0x102); // Normal execution continues
 
-        /* Resend IRQ (not executed) */
-        ack = cpu_irq(ins);
-        TEST_ASSERT_EQ(ack, 0);
-        TEST_ASSERT_EQ8(cpu_A, 0x99);
+        /* Resend IRQ (not executed because INTE not reenabled) */
+        cpu_irq_data = ins;
+        cpu_step(); // MVI A, $11 is executed
+        TEST_ASSERT_EQ(cpu_irq_ack, 0);
+        TEST_ASSERT_EQ8(cpu_A, 0x11);
+        TEST_ASSERT_EQ16(cpu_PC, 0x104);
 
         /* Step after IRQ (continue execution) */
         cpu_step();
-        TEST_ASSERT_EQ8(cpu_A, 0x11);
+        TEST_ASSERT_EQ8(cpu_A, 0x12);
+        TEST_ASSERT_EQ16(cpu_PC, 0x106);
 
         /* Reset inte, send another IRQ */
         ins[0] = 0x3a; // LDA $0400
@@ -1188,48 +1195,56 @@ int main(void) {
         ins[2] = 0x04;
         io_ram[0x0400] = 0x88;
         cpu_inte = true;
-        ack = cpu_irq(ins);
-        TEST_ASSERT_EQ(ack, 1);
+        cpu_irq_data = ins;
+        cpu_step();
+        TEST_ASSERT_EQ(cpu_inte, false);
+        TEST_ASSERT_EQ(cpu_irq_ack, 1);
         TEST_ASSERT_EQ8(cpu_A, 0x88);
+        TEST_ASSERT_EQ16(cpu_PC, 0x106);
 
-        /* Resend again (fail) */
-        ack = cpu_irq(ins);
-        TEST_ASSERT_EQ(ack, 0);
-        TEST_ASSERT_EQ8(cpu_A, 0x88);
+        /* Resend again (fail, interrupts still disabled) */
+        cpu_irq_data = ins;
+        cpu_step(); // MVI A, $13 is executed instead
+        TEST_ASSERT_EQ(cpu_inte, false);
+        TEST_ASSERT_EQ(cpu_irq_ack, 0);
+        TEST_ASSERT_EQ8(cpu_A, 0x13);
+        TEST_ASSERT_EQ16(cpu_PC, 0x108);
 
         /* Reset inte, send RST instruction */
+        ins[0] = 0xe7; // RST 4
         cpu_inte = true;
-        ack = cpu_irq_rst(4);
-        TEST_ASSERT_EQ(ack, 1);
-        TEST_ASSERT_EQ8(cpu_A, 0x88);
+        cpu_irq_data = ins;
+        cpu_step();
+        TEST_ASSERT_EQ(cpu_irq_ack, 1);
+        TEST_ASSERT_EQ8(cpu_A, 0x13);
         TEST_ASSERT_EQ16(cpu_PC, 0x20);
 
         /* Resend (fail) */
-        ack = cpu_irq_rst(8);
-        TEST_ASSERT_EQ(ack, 0);
-        TEST_ASSERT_EQ8(cpu_A, 0x88);
-        TEST_ASSERT_EQ16(cpu_PC, 0x20);
-
-        /* Step through RST 4 procedure */
-        cpu_step(); // MVI A, $77
+        ins[0] = 0xe7; // RST 4
+        cpu_irq_data = ins;
+        cpu_step(); // MVI A, $77 is executed
         TEST_ASSERT_EQ(cpu_inte, false);
+        TEST_ASSERT_EQ(cpu_irq_ack, false);
+        TEST_ASSERT_EQ(cpu_irq_data == NULL, true);
         TEST_ASSERT_EQ8(cpu_A, 0x77);
         TEST_ASSERT_EQ16(cpu_PC, 0x22);
 
+        /* Step through RST 4 procedure */
         cpu_step(); // EI
         TEST_ASSERT_EQ(cpu_inte, true);
+        TEST_ASSERT_EQ(cpu_irq_data == NULL, true);
         TEST_ASSERT_EQ8(cpu_A, 0x77);
         TEST_ASSERT_EQ16(cpu_PC, 0x23);
 
         cpu_step(); // RET
         TEST_ASSERT_EQ(cpu_inte, true);
         TEST_ASSERT_EQ8(cpu_A, 0x77);
-        TEST_ASSERT_EQ16(cpu_PC, 0x104);
+        TEST_ASSERT_EQ16(cpu_PC, 0x108);
 
         cpu_step(); // MVI A, $12 (back to main program)
         TEST_ASSERT_EQ(cpu_inte, true);
-        TEST_ASSERT_EQ8(cpu_A, 0x12);
-        TEST_ASSERT_EQ16(cpu_PC, 0x106);
+        TEST_ASSERT_EQ8(cpu_A, 0x14);
+        TEST_ASSERT_EQ16(cpu_PC, 0x10a);
 
     TEST_END;
 }

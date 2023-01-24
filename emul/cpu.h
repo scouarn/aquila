@@ -52,21 +52,30 @@ extern struct s_cpu_regs {
     addr_t PC, reg_SP; // SP is a defined macro
 
     /* Output pins: hold/halt, interrupt enabled */
+        // FIXME: hold is wrong
     bool hold, inte;
 
     /* Input pins:
         Setting reset and stepping resets PC, inte, cycles and
-        reset is set back to false */
+        reset is set back to false
+
+        Wait does nothing and is juste an indicator
+        set by io which does the waiting */
+        //FIXME: ready instead of wait
     bool wait, reset;
 
     /* Number of cycles from last reset */
     uint64_t cycles;
 
-    /* If not NULL, instructions will be fetched from this pointer,
-        used for interrupt requests */
-    data_t *fetch_data;
+    /* Set to request an interrupt, instructions
+        will be fetched from this pointer */
+    data_t *irq_data;
+    bool irq_ack; // FIXME
 
 } cpu_state;
+
+/* One instruction */
+void cpu_step(void);
 
 #define cpu_A   cpu_state._psw._rp.A
 #define cpu_FL  cpu_state._psw._rp.FL
@@ -88,20 +97,9 @@ extern struct s_cpu_regs {
 #define cpu_wait  cpu_state.wait
 #define cpu_reset cpu_state.reset
 
-#define cpu_cycles     cpu_state.cycles
-#define cpu_fetch_data cpu_state.fetch_data
+#define cpu_cycles   cpu_state.cycles
+#define cpu_irq_data cpu_state.irq_data
+#define cpu_irq_ack  cpu_state.irq_ack
 
-
-/* One instruction */
-void cpu_step(void);
-
-/* Send interrupt with data for one instruction wich is executed,
-    return 1 if the irq was acknoledged */
-int cpu_irq(data_t instruction[]);
-
-/* Send interrupt with a RST instruction,
-    the code must be <= 7,
-    return 1 if the irq was acknoledged */
-int cpu_irq_rst(uint8_t code);
 
 #endif
