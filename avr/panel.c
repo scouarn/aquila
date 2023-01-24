@@ -80,6 +80,11 @@ data_t panel_read_data(void) {
     return ~PINA;
 }
 
+/* On the real Altair the sense switches are the upper 8bits */
+data_t panel_read_sense(void) {
+    return ~PINA;
+}
+
 /* Read address from ports C and A */
 addr_t panel_read_addr(void) {
     return ~((PINC << 8) | PINA);

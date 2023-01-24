@@ -10,10 +10,9 @@
 #endif
 
 #define MAX_PORT  256
-
-/* Ports the CPU will use to communicate via serial */
-#define SIO_STATUS 0
-#define SIO_DATA   1
+#define SIO_STATUS_PORT 0
+#define SIO_DATA_PORT   1
+#define SENSE_PORT 255
 
 /* Baud rate used by the serial port */
 #define BAUD_RATE 9600U

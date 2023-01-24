@@ -29,6 +29,8 @@
     if ((REG) != (VAL)) { TEST_FAIL(#REG " is $%04x instead of $%04x", REG, VAL); }
 
 data_t io_ram[RAM_SIZE];
+data_t io_data_bus;
+addr_t io_addr_bus;
 
 data_t io_load(addr_t addr) {
     return io_ram[addr];

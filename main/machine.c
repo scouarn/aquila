@@ -4,6 +4,8 @@
 #include "emul/io.h"
 
 data_t io_ram[RAM_SIZE];
+data_t io_data_bus;
+addr_t io_addr_bus;
 
 data_t io_load(addr_t addr) {
 #if RAM_SIZE < 0xffff

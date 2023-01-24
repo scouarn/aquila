@@ -14,7 +14,7 @@ data_t BDOS[] = {
 
 // $000c putchar:           // Syscall 2 : putchar E
         0x7b,               // MOV A, E
-        0xd3, SIO_DATA,     // OUT TTY
+        0xd3, SIO_DATA_PORT,// OUT TTY
 
 // $000f end:               // Return from the syscall
         0xf1,               // POP PSW
@@ -25,7 +25,7 @@ data_t BDOS[] = {
         0x1a,               // LDAX D
         0xfe, '$',          // CPI '$'
         0xca, 0x0f, 0x00,   // JZ  end
-        0xd3, SIO_DATA,     // OUT TTY
+        0xd3, SIO_DATA_PORT,// OUT TTY
         0x13,               // INX D
         0xc3, 0x11, 0x00,   // JMP loop
 

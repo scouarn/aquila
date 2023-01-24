@@ -2,6 +2,9 @@
 
 #include "../emul/io.h"
 
+#include "panel.h"
+
+
 data_t io_data_bus = 0x00;
 addr_t io_addr_bus = 0x0000;
 
@@ -31,7 +34,7 @@ data_t io_input(port_t port) {
     switch (port) {
 
         /* Translate the USART status byte into a 88-2 SIO status byte */
-        case SIO_STATUS:
+        case SIO_STATUS_PORT:
 
             /* Rx busy */
             if ((UCSR0A & _BV(RXC0)) == 0) {
@@ -46,13 +49,17 @@ data_t io_input(port_t port) {
             /* Error bits can also be hooked up */
         break;
 
-        case SIO_DATA:
+        case SIO_DATA_PORT:
             /* Wait until there is data to read */
             // FIXME: sometimes Basic still waits -> check ASM
             while ((UCSR0A & _BV(RXC0)) == 0) {}
 
             /* Receive */
             io_data_bus = UDR0;
+        break;
+
+        case SENSE_PORT:
+            io_data_bus = panel_read_sense();
         break;
 
         default: break;
@@ -70,16 +77,20 @@ void io_output(port_t port, data_t data) {
     switch (port) {
 
         /* Control register of the SIO card */
-        case SIO_STATUS:
+        case SIO_STATUS_PORT:
             /* */
         break;
 
-        case SIO_DATA:
+        case SIO_DATA_PORT:
             /* Wait until there is space to write */
             while ((UCSR0A & _BV(UDRE0)) == 0) {}
 
             /* Send: chop the msbit because 4k basic does things to them */
             UDR0 = data & 0x7f;
+        break;
+
+        case SENSE_PORT:
+            /* Nothing to do */
         break;
 
         default: break;
