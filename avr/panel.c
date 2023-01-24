@@ -139,6 +139,7 @@ ISR (INT0_vect) {
     }
 
     /* Update state of the buses */
+    cpu_PC = io_addr_bus;
     io_data_bus = io_ram[io_addr_bus];
 }
 
@@ -172,6 +173,7 @@ ISR (INT3_vect) {
         cpu_hold = false;
         cpu_step();
         cpu_hold = true;
+        io_addr_bus = cpu_PC;
     }
 }
 
@@ -181,10 +183,10 @@ ISR (INT4_vect) {
 
     /* Reset */
     if (panel_read_shift()) {
-        // FIXME: does not work, the CPU could be executing
-        // -> simply set a reset pin on the cpu and return
-        cpu_reset(); 
-        cpu_hold = true;
+        // FIXME: Not sure if it really works
+        cpu_reset = true; // Reset occurs on next step
+        cpu_hold = true; // FIXME: does reset on the real 8080 bypasses hold ?
+        // On real Altair reset does not set hold...
     }
 
     /* Run */

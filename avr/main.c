@@ -18,7 +18,10 @@ int main(void) {
     /* Init emulator */
     io_serial_init();
     panel_init();
-    cpu_reset();
+
+    cpu_reset = true;
+    cpu_step();
+    cpu_reset = false;
     cpu_hold = true;
 
     sei();

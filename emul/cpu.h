@@ -51,36 +51,49 @@ extern struct s_cpu_regs {
     /* Program counter and stack pointer */
     addr_t PC, reg_SP; // SP is a defined macro
 
-} cpu_regs;
+    /* Output pins: hold/halt, interrupt enabled */
+    bool hold, inte;
 
-#define cpu_A   cpu_regs._psw._rp.A
-#define cpu_FL  cpu_regs._psw._rp.FL
-#define cpu_PSW cpu_regs._psw.PSW
-#define cpu_B   cpu_regs._bc._rp.B
-#define cpu_C   cpu_regs._bc._rp.C
-#define cpu_BC  cpu_regs._bc.BC
-#define cpu_D   cpu_regs._de._rp.D
-#define cpu_E   cpu_regs._de._rp.E
-#define cpu_DE  cpu_regs._de.DE
-#define cpu_H   cpu_regs._hl._rp.H
-#define cpu_L   cpu_regs._hl._rp.L
-#define cpu_HL  cpu_regs._hl.HL
-#define cpu_PC  cpu_regs.PC
-#define cpu_SP  cpu_regs.reg_SP
+    /* Input pins:
+        Setting reset and stepping resets PC, inte, cycles and
+        reset is set back to false */
+    bool wait, reset;
 
+    /* Number of cycles from last reset */
+    uint64_t cycles;
 
-/* hold/halt and interrupt enable bits */
-extern bool cpu_hold, cpu_inte, cpu_wait;
+    /* If not NULL, instructions will be fetched from this pointer,
+        used for interrupt requests */
+    data_t *fetch_data;
 
-/* Number of cycles from last cpu_reset */
-extern uint64_t cycles;
+} cpu_state;
+
+#define cpu_A   cpu_state._psw._rp.A
+#define cpu_FL  cpu_state._psw._rp.FL
+#define cpu_PSW cpu_state._psw.PSW
+#define cpu_B   cpu_state._bc._rp.B
+#define cpu_C   cpu_state._bc._rp.C
+#define cpu_BC  cpu_state._bc.BC
+#define cpu_D   cpu_state._de._rp.D
+#define cpu_E   cpu_state._de._rp.E
+#define cpu_DE  cpu_state._de.DE
+#define cpu_H   cpu_state._hl._rp.H
+#define cpu_L   cpu_state._hl._rp.L
+#define cpu_HL  cpu_state._hl.HL
+#define cpu_PC  cpu_state.PC
+#define cpu_SP  cpu_state.reg_SP
+
+#define cpu_hold  cpu_state.hold
+#define cpu_inte  cpu_state.inte
+#define cpu_wait  cpu_state.wait
+#define cpu_reset cpu_state.reset
+
+#define cpu_cycles     cpu_state.cycles
+#define cpu_fetch_data cpu_state.fetch_data
 
 
 /* One instruction */
 void cpu_step(void);
-
-/* Only reset PC and hold/inte */
-void cpu_reset(void);
 
 /* Send interrupt with data for one instruction wich is executed,
     return 1 if the irq was acknoledged */

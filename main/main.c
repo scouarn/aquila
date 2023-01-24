@@ -27,7 +27,8 @@ int main(int argc, char **argv) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 
     /* Init machine */
-    cpu_reset();
+    cpu_reset = true;
+    cpu_step();
     cpu_PC = LOAD_ADDR;
 
     /* Load BDOS */

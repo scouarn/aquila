@@ -8,13 +8,7 @@
 // http://dunfield.classiccmp.org/r/8080.txt
 // https://www.autometer.de/unix4fun/z80pack/ftp/manuals/Intel/8080_8085_asm_Nov78.pdf
 
-struct s_cpu_regs cpu_regs;
-bool cpu_hold, cpu_inte, cpu_wait;
-uint64_t cycles;
-
-/* If not NULL, instructions will be fetched from this pointer,
-    used for interrupt requests */
-static data_t *fetch_data;
+struct s_cpu_regs cpu_state;
 
 #define NIMPL assert(0 && "Not implemented")
 
@@ -28,22 +22,14 @@ static data_t *fetch_data;
 #define COND_PO  (!COND_PE)
 #define COND_P   (!COND_M)
 
-void cpu_reset(void) {
-    ENFORCE_FLAGS();
-    cpu_PC = 0;
-    cpu_hold = cpu_inte = cpu_wait = false;
-    fetch_data = NULL;
-    cycles = 0;
-}
-
 int cpu_irq(data_t instruction[]) {
     if (!cpu_inte) return 0;
 
     cpu_inte = false;
 
-    fetch_data = instruction;
+    cpu_fetch_data = instruction;
     cpu_step();
-    fetch_data = NULL;
+    cpu_fetch_data = NULL;
 
     return 1;
 }
@@ -61,9 +47,9 @@ int cpu_irq_rst(uint8_t code) {
 static data_t fetch() {
 
     /* Fetch interrupt instruction */
-    if (fetch_data != NULL) {
-        data_t data = *fetch_data;
-        fetch_data++;
+    if (cpu_fetch_data != NULL) {
+        data_t data = *cpu_fetch_data;
+        cpu_fetch_data++;
         return data;
     }
 
@@ -171,7 +157,7 @@ static addr_t pop_word(void) {
 #define CALL(COND) do {             \
     addr_t addr = fetch_addr();     \
     if (!(COND)) break;             \
-    cycles += 5;                    \
+    cpu_cycles += 5;                \
     push_word(cpu_PC);              \
     cpu_PC = addr;                  \
 } while (0)
@@ -179,7 +165,7 @@ static addr_t pop_word(void) {
 /* RET RZ RNZ RC RNC RPE RPO RM RP */
 #define RET(COND) do {              \
     if (!(COND)) break;             \
-    cycles += 6;                    \
+    cpu_cycles += 6;                \
     cpu_PC = pop_word();            \
 } while (0)
 
@@ -344,15 +330,36 @@ const uint8_t cycle_table[256] = {
 
 void cpu_step(void) {
 
-    /* Check if halted */
-    if (cpu_hold) {
-        //cycles += 1;
+    /* Reset request */
+    if (cpu_reset) {
+        ENFORCE_FLAGS();
+        cpu_inte = cpu_reset = false;
+        cpu_PC = 0;
+        cpu_cycles = 0;
+
+        // FIXME: find a better place to put these
+        io_data_bus = 0x00;
+        io_addr_bus = 0x0000;
         return;
     }
 
+    /* Handle interrupt request */
+    if (cpu_fetch_data) {
+        // TODO: implement...
+        return;
+    }
+
+    /* Check if halted */
+    if (cpu_hold) {
+        //cpu_cycles += 1;
+        return;
+    }
+
+    // TODO: cpu_wait (?)
+
     /* Fetch */
     uint8_t opc = fetch();
-    cycles += cycle_table[opc];
+    cpu_cycles += cycle_table[opc];
 
     /* Decode-Excecute */
     switch (opc) {

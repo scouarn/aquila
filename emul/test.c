@@ -7,7 +7,8 @@
 #define TEST_BEGIN(X) do {                  \
     printf("Testing %-10s", X);             \
     fflush(stdout);                         \
-    cpu_reset();                            \
+    cpu_reset = true;                       \
+    cpu_step();                             \
     memset(io_ram, 0, RAM_SIZE);
 
 #define TEST_END \
