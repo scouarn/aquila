@@ -12,11 +12,11 @@ typedef uint8_t  port_t;
 #define LO_BYTE(X) ((data_t)X)
 #define WORD(H, L) ((addr_t)(H << 8) | L)
 
-#define FLAG_C 0x01
-#define FLAG_P 0x04
-#define FLAG_A 0x10
-#define FLAG_Z 0x40
-#define FLAG_S 0x80
+#define FLAG_C (1<<0)
+#define FLAG_P (1<<2)
+#define FLAG_A (1<<4)
+#define FLAG_Z (1<<6)
+#define FLAG_S (1<<7)
 
 /* The bit which is always 1 and the bits which are always 0 */
 #define ENFORCE_FLAGS() do {            \
