@@ -2,6 +2,7 @@
 #define PANEL_H
 
 #include "../emul/cpu.h"
+#include "../emul/io.h"
 
 /* Setup interrupts, timers and GPIO for the front panel */
 void panel_init(void);

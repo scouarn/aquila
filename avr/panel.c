@@ -7,12 +7,7 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 
-#include "../emul/io.h"
-
 #include "panel.h"
-
-static data_t *curr_data;
-static addr_t *curr_addr;
 
 /* Global timer (mainly used for debounce) */
 static uint16_t timer_ticks = 0;
@@ -78,10 +73,6 @@ void panel_init(void) {
         and 6 "select" pins as output */
     DDRB = 0xff; PORTB = 0x00;
     DDRL = 0xff; PORTL = 0xff;
-
-    // FIXME: "io_data_bus"
-    curr_data = &cpu_A;
-    curr_addr = &cpu_PC;
 }
 
 /* Read 8bit data from port A */
@@ -110,14 +101,15 @@ ISR(TIMER1_OVF_vect) {
 
     uint8_t val;
 
+    /* Read the state of the CPU and buses */
     switch (curr_nib) {
         case STAT_NIB_0: val = (cpu_hold << 3) | (cpu_wait << 2); break;
-        case DATA_NIB_0: val = *curr_data >>  0; break;
-        case DATA_NIB_1: val = *curr_data >>  4; break;
-        case ADDR_NIB_0: val = *curr_addr >>  0; break;
-        case ADDR_NIB_1: val = *curr_addr >>  4; break;
-        case ADDR_NIB_2: val = *curr_addr >>  8; break;
-        case ADDR_NIB_3: val = *curr_addr >> 12; break;
+        case DATA_NIB_0: val = io_data_bus >>  0; break;
+        case DATA_NIB_1: val = io_data_bus >>  4; break;
+        case ADDR_NIB_0: val = io_addr_bus >>  0; break;
+        case ADDR_NIB_1: val = io_addr_bus >>  4; break;
+        case ADDR_NIB_2: val = io_addr_bus >>  8; break;
+        case ADDR_NIB_3: val = io_addr_bus >> 12; break;
         default: val = 0x00; break;
     }
 
@@ -140,14 +132,14 @@ ISR (INT0_vect) {
 
     /* Next */
     if (panel_read_shift()) {
-        (*curr_addr)++;
+        io_addr_bus++;
     }
     else {
-        *curr_addr = panel_read_addr();
+        io_addr_bus = panel_read_addr();
     }
 
-    // FIXME: there should be a "io_data_bus"
-    *curr_data = io_ram[*curr_addr];
+    /* Update state of the buses */
+    io_data_bus = io_ram[io_addr_bus];
 }
 
 /* Deposit (next) button */
@@ -157,12 +149,14 @@ ISR (INT1_vect) {
 
     /* Next */
     if (panel_read_shift()) {
-        (*curr_addr)++;
+        io_addr_bus++;
     }
 
-    // FIXME: there should be a "io_data_bus"
-    *curr_data = panel_read_data();
-    io_ram[*curr_addr] = *curr_data;
+    /* Update state of the buses */
+    io_data_bus = panel_read_data();
+
+    /* Update RAM content */
+    io_ram[io_addr_bus] = io_data_bus;
 }
 
 /* Shift button */

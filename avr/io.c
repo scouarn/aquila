@@ -2,24 +2,31 @@
 
 #include "../emul/io.h"
 
+data_t io_data_bus = 0x00;
+addr_t io_addr_bus = 0x0000;
+
+
 data_t io_load(addr_t addr) {
 #if RAM_SIZE < 0xffff
     if (addr >= RAM_SIZE) return 0x00;
 #endif
-
-    return io_ram[addr];
+    io_addr_bus = addr;
+    io_data_bus = io_ram[addr];
+    return io_data_bus;
 }
 
 void io_store(addr_t addr, data_t data) {
 #if RAM_SIZE < 0xffff
     if (addr >= RAM_SIZE) return;
 #endif
+    io_addr_bus  = addr;
+    io_data_bus  = data;
     io_ram[addr] = data;
 }
 
 data_t io_input(port_t port) {
     cpu_wait = true;
-    data_t data = 0x00;
+    io_addr_bus = (port << 8) | port; // According to datasheet
 
     switch (port) {
 
@@ -28,12 +35,12 @@ data_t io_input(port_t port) {
 
             /* Rx busy */
             if ((UCSR0A & _BV(RXC0)) == 0) {
-                data |= 0x03;
+                io_data_bus |= 0x03;
             }
 
             /* Tx busy */
             if ((UCSR0A & _BV(UDRE0)) == 0) {
-                data |= 0x80;
+                io_data_bus |= 0x80;
             }
 
             /* Error bits can also be hooked up */
@@ -41,21 +48,24 @@ data_t io_input(port_t port) {
 
         case SIO_DATA:
             /* Wait until there is data to read */
+            // FIXME: sometimes Basic still waits -> check ASM
             while ((UCSR0A & _BV(RXC0)) == 0) {}
 
             /* Receive */
-            data = UDR0;
+            io_data_bus = UDR0;
         break;
 
         default: break;
     }
 
     cpu_wait = false;
-    return data;
+    return io_data_bus;
 }
 
 void io_output(port_t port, data_t data) {
     cpu_wait = true;
+    io_addr_bus = (port << 8) | port; // According to datasheet
+    io_data_bus = data;
 
     switch (port) {
 

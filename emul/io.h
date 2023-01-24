@@ -1,6 +1,8 @@
 #ifndef IO_H
 #define IO_H
 
+/* Has to be implemented by the application */
+
 #include "cpu.h"
 
 #ifndef RAM_SIZE
@@ -19,6 +21,11 @@
 
 /* Big chunk of memory */
 extern data_t io_ram[RAM_SIZE];
+
+/* Current state of the buses */
+extern data_t io_data_bus;
+extern addr_t io_addr_bus;
+
 
 #define RAM_LOAD_ARR(OFF, ARR) do {    \
     memcpy(io_ram+OFF, ARR, sizeof(ARR));      \
