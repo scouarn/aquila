@@ -1,7 +1,7 @@
 include config.mk
 
 # Sub systems
-MODULES = main emul socktest avr
+MODULES = emul proto
 
 .PHONY: all clean upload $(MODULES) $(TESTS)
 all : $(MODULES)
@@ -15,14 +15,14 @@ define make_module
 endef
 
 # Sub sustems deps
-main: emul
+#proto: emul # proto rebuilds its copy of emul...
 
 # Commands / shortcuts
 run: main
 	rlwrap bin/main/main
 
 upload:
-	@$(call make_module,avr,upload)
+	@$(call make_module,proto,upload)
 
 test: emul
 	bin/emul/test

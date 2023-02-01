@@ -337,9 +337,6 @@ void cpu_step(void) {
         cpu_PC = 0;
         cpu_cycles = 0;
 
-        // FIXME: find a better place to put these
-        io_data_bus = 0x00;
-        io_addr_bus = 0x0000;
         return;
     }
 

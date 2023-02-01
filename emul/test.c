@@ -4,6 +4,8 @@
 #include "cpu.h"
 #include "io.h"
 
+#define RAM_SIZE 0x10000
+
 #define TEST_BEGIN(X) do {                  \
     printf("Testing %-10s", X);             \
     fflush(stdout);                         \
