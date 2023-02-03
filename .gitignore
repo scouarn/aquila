@@ -1,5 +1,15 @@
 /bin
 /test_roms
+*.bak
+
 *.o
 *.so
 *.a
+
+*.bin
+*.hex
+*.HEX
+*.com
+*.COM
+*.prn
+*.PRN
