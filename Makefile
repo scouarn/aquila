@@ -15,7 +15,7 @@ define make_module
 endef
 
 # Sub sustems deps
-#proto: emul # proto rebuilds its copy of emul...
+proto: emul
 
 # Commands / shortcuts
 run: main

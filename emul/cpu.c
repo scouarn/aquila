@@ -2,13 +2,12 @@
 #include <stdio.h>
 
 #include "cpu.h"
-#include "io.h"
 
 // https://www.pastraiser.com/cpu/i8080/i8080_opcodes.html
 // http://dunfield.classiccmp.org/r/8080.txt
 // https://www.autometer.de/unix4fun/z80pack/ftp/manuals/Intel/8080_8085_asm_Nov78.pdf
 
-struct s_cpu_regs cpu_state;
+struct s_cpu_state cpu_state;
 
 #define NIMPL assert(0 && "Not implemented")
 
@@ -54,7 +53,7 @@ static data_t fetch() {
     }
 
     /* Fetch from memory */
-    return io_load(cpu_PC++);
+    return cpu_load(cpu_PC++);
 }
 
 /* Get next word */
@@ -84,43 +83,43 @@ static void update_ZSP(data_t reg) {
 }
 
 static void push_word(addr_t word) {
-    io_store(--cpu_SP, HI_BYTE(word));
-    io_store(--cpu_SP, LO_BYTE(word));
+    cpu_store(--cpu_SP, HI_BYTE(word));
+    cpu_store(--cpu_SP, LO_BYTE(word));
 }
 
 static addr_t pop_word(void) {
-    data_t lo = io_load(cpu_SP++);
-    data_t hi = io_load(cpu_SP++);
+    data_t lo = cpu_load(cpu_SP++);
+    data_t hi = cpu_load(cpu_SP++);
     return WORD(hi, lo);
 }
 
 #define NOP() do { } while (0)
 
 #define MOV_MR(SRC) \
-    io_store(cpu_HL, SRC);
+    cpu_store(cpu_HL, SRC);
 
 #define MOV_RM(DEST) \
-    DEST = io_load(cpu_HL);
+    DEST = cpu_load(cpu_HL);
 
 #define STAX(ADDR) \
-    io_store(ADDR, cpu_A);
+    cpu_store(ADDR, cpu_A);
 
 #define LDAX(RP) \
-    cpu_A = io_load(RP);
+    cpu_A = cpu_load(RP);
 
 #define LDA() \
-    cpu_A = io_load(fetch_addr());
+    cpu_A = cpu_load(fetch_addr());
 
 #define SHLD() do {                 \
     addr_t addr = fetch_addr();     \
-    io_store(addr,   cpu_L);        \
-    io_store(addr+1, cpu_H);        \
+    cpu_store(addr,   cpu_L);        \
+    cpu_store(addr+1, cpu_H);        \
 } while (0);
 
 #define LHLD() do {                 \
     addr_t addr = fetch_addr();     \
-    cpu_L = io_load(addr);          \
-    cpu_H = io_load(addr+1);        \
+    cpu_L = cpu_load(addr);          \
+    cpu_H = cpu_load(addr+1);        \
 } while (0);
 
 #define MVI(DST) \
@@ -421,9 +420,9 @@ void cpu_step(void) {
         case 0x31: LXI(cpu_SP);                         break; // LXI SP, d16
         case 0x32: STAX(fetch_addr());                  break; // STA a16
         case 0x33: cpu_SP++;                            break; // INX SP
-        case 0x34: io_store(cpu_HL, inc8(io_load(cpu_HL),  1)); break; // INR M
-        case 0x35: io_store(cpu_HL, inc8(io_load(cpu_HL), -1)); break; // DCR M
-        case 0x36: io_store(cpu_HL, fetch());           break; // MVI M, d8
+        case 0x34: cpu_store(cpu_HL, inc8(cpu_load(cpu_HL),  1)); break; // INR M
+        case 0x35: cpu_store(cpu_HL, inc8(cpu_load(cpu_HL), -1)); break; // DCR M
+        case 0x36: cpu_store(cpu_HL, fetch());          break; // MVI M, d8
         case 0x37: cpu_FL |= FLAG_C;                    break; // STC
         case 0x38: NOP();                               break; // NOP
         case 0x39: DAD(cpu_SP);                         break; // DAD SP
@@ -503,7 +502,7 @@ void cpu_step(void) {
         case 0x83: ADC(cpu_E, 0);                       break; // ADD E
         case 0x84: ADC(cpu_H, 0);                       break; // ADD H
         case 0x85: ADC(cpu_L, 0);                       break; // ADD L
-        case 0x86: ADC(io_load(cpu_HL), 0);             break; // ADD M
+        case 0x86: ADC(cpu_load(cpu_HL), 0);            break; // ADD M
         case 0x87: ADC(cpu_A, 0);                       break; // ADD A
         case 0x88: ADC(cpu_B, 1);                       break; // ADC B
         case 0x89: ADC(cpu_C, 1);                       break; // ADC C
@@ -511,7 +510,7 @@ void cpu_step(void) {
         case 0x8b: ADC(cpu_E, 1);                       break; // ADC E
         case 0x8c: ADC(cpu_H, 1);                       break; // ADC H
         case 0x8d: ADC(cpu_L, 1);                       break; // ADC L
-        case 0x8e: ADC(io_load(cpu_HL), 1);             break; // ADC M
+        case 0x8e: ADC(cpu_load(cpu_HL), 1);            break; // ADC M
         case 0x8f: ADC(cpu_A, 1);                       break; // ADC A
         case 0x90: SBB(cpu_B, 0);                       break; // SUB B
         case 0x91: SBB(cpu_C, 0);                       break; // SUB C
@@ -519,7 +518,7 @@ void cpu_step(void) {
         case 0x93: SBB(cpu_E, 0);                       break; // SUB E
         case 0x94: SBB(cpu_H, 0);                       break; // SUB H
         case 0x95: SBB(cpu_L, 0);                       break; // SUB L
-        case 0x96: SBB(io_load(cpu_HL), 0);             break; // SUB M
+        case 0x96: SBB(cpu_load(cpu_HL), 0);            break; // SUB M
         case 0x97: SBB(cpu_A, 0);                       break; // SUB A
         case 0x98: SBB(cpu_B, 1);                       break; // SBB B
         case 0x99: SBB(cpu_C, 1);                       break; // SBB C
@@ -527,7 +526,7 @@ void cpu_step(void) {
         case 0x9b: SBB(cpu_E, 1);                       break; // SBB E
         case 0x9c: SBB(cpu_H, 1);                       break; // SBB H
         case 0x9d: SBB(cpu_L, 1);                       break; // SBB L
-        case 0x9e: SBB(io_load(cpu_HL), 1);             break; // SBB M
+        case 0x9e: SBB(cpu_load(cpu_HL), 1);            break; // SBB M
         case 0x9f: SBB(cpu_A, 1);                       break; // SBB A
         case 0xa0: AND(cpu_B);                          break; // ANA B
         case 0xa1: AND(cpu_C);                          break; // ANA C
@@ -535,7 +534,7 @@ void cpu_step(void) {
         case 0xa3: AND(cpu_E);                          break; // ANA E
         case 0xa4: AND(cpu_H);                          break; // ANA H
         case 0xa5: AND(cpu_L);                          break; // ANA L
-        case 0xa6: AND(io_load(cpu_HL));                break; // ANA M
+        case 0xa6: AND(cpu_load(cpu_HL));               break; // ANA M
         case 0xa7: AND(cpu_A);                          break; // ANA A
         case 0xa8: XRA(cpu_B);                          break; // XRA B
         case 0xa9: XRA(cpu_C);                          break; // XRA C
@@ -543,7 +542,7 @@ void cpu_step(void) {
         case 0xab: XRA(cpu_E);                          break; // XRA E
         case 0xac: XRA(cpu_H);                          break; // XRA H
         case 0xad: XRA(cpu_L);                          break; // XRA L
-        case 0xae: XRA(io_load(cpu_HL));                break; // XRA M
+        case 0xae: XRA(cpu_load(cpu_HL));               break; // XRA M
         case 0xaf: XRA(cpu_A);                          break; // XRA A
         case 0xb0: ORA(cpu_B);                          break; // ORA B
         case 0xb1: ORA(cpu_C);                          break; // ORA C
@@ -551,7 +550,7 @@ void cpu_step(void) {
         case 0xb3: ORA(cpu_E);                          break; // ORA E
         case 0xb4: ORA(cpu_H);                          break; // ORA H
         case 0xb5: ORA(cpu_L);                          break; // ORA L
-        case 0xb6: ORA(io_load(cpu_HL));                break; // ORA M
+        case 0xb6: ORA(cpu_load(cpu_HL));               break; // ORA M
         case 0xb7: ORA(cpu_A);                          break; // ORA A
         case 0xb8: CMP(cpu_B);                          break; // CMP B
         case 0xb9: CMP(cpu_C);                          break; // CMP C
@@ -559,7 +558,7 @@ void cpu_step(void) {
         case 0xbb: CMP(cpu_E);                          break; // CMP E
         case 0xbc: CMP(cpu_H);                          break; // CMP H
         case 0xbd: CMP(cpu_L);                          break; // CMP L
-        case 0xbe: CMP(io_load(cpu_HL));                break; // CMP M
+        case 0xbe: CMP(cpu_load(cpu_HL));               break; // CMP M
         case 0xbf: CMP(cpu_A);                          break; // CMP A
         case 0xc0: RET(COND_NZ);                        break; // RNZ
         case 0xc1: POP(cpu_BC);                         break; // POP B
@@ -580,7 +579,7 @@ void cpu_step(void) {
         case 0xd0: RET(COND_NC);                        break; // RNC
         case 0xd1: POP(cpu_DE);                         break; // POP D
         case 0xd2: JMP(COND_NC);                        break; // JNC a16
-        case 0xd3: io_output(fetch(), cpu_A);           break; // OUT p8
+        case 0xd3: cpu_output(fetch(), cpu_A);          break; // OUT p8
         case 0xd4: CALL(COND_NC);                       break; // CNC a16
         case 0xd5: push_word(cpu_DE);                   break; // PUSH D
         case 0xd6: SBB(fetch(), 0);                     break; // SUI d8
@@ -588,7 +587,7 @@ void cpu_step(void) {
         case 0xd8: RET(COND_C);                         break; // RC
         case 0xd9: RET(true);                           break; // *RET
         case 0xda: JMP(COND_C);                         break; // JC a16
-        case 0xdb: cpu_A = io_input(fetch());           break; // IN p8
+        case 0xdb: cpu_A = cpu_input(fetch());          break; // IN p8
         case 0xdc: CALL(COND_C);                        break; // CC a16
         case 0xdd: CALL(true);                          break; // *CALL a16
         case 0xde: SBB(fetch(), 1);                     break; // SBI d8

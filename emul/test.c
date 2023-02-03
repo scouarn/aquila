@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "cpu.h"
-#include "io.h"
 
 #define RAM_SIZE 0x10000
 
@@ -30,23 +29,38 @@
 #define TEST_ASSERT_EQ16(REG, VAL) \
     if ((REG) != (VAL)) { TEST_FAIL(#REG " is $%04x instead of $%04x", REG, VAL); }
 
+
+
+#define RAM_LOAD_ARR(OFF, ARR) do {    \
+    memcpy(io_ram+OFF, ARR, sizeof(ARR));      \
+} while (0)
+
+#define RAM_LOAD(OFF, ...) do {        \
+    const data_t prog[] = { __VA_ARGS__ };  \
+    RAM_LOAD_ARR(OFF, prog);           \
+} while (0)
+
+#define RAM_LOAD_FILE(OFF, FP) \
+    fread(io_ram+OFF, 1, RAM_SIZE-OFF, FP);
+
+
 data_t io_ram[RAM_SIZE];
 data_t io_data_bus;
 addr_t io_addr_bus;
 
-data_t io_load(addr_t addr) {
+data_t cpu_load(addr_t addr) {
     return io_ram[addr];
 }
 
-void io_store(addr_t addr, data_t data) {
+void cpu_store(addr_t addr, data_t data) {
     io_ram[addr] = data;
 }
 
-data_t io_input(port_t port) {
+data_t cpu_input(port_t port) {
     return io_ram[port];
 }
 
-void io_output(port_t port, data_t data) {
+void cpu_output(port_t port, data_t data) {
     io_ram[port] = data;
 }
 

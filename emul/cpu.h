@@ -12,6 +12,7 @@ typedef uint8_t  port_t;
 #define LO_BYTE(X) ((data_t)X)
 #define WORD(H, L) ((addr_t)(H << 8) | L)
 
+/* Bits of the status register */
 #define FLAG_C (1<<0)
 #define FLAG_P (1<<2)
 #define FLAG_A (1<<4)
@@ -24,9 +25,8 @@ typedef uint8_t  port_t;
     cpu_FL &= 0xd7;                     \
 } while (0)
 
-
 /* Register bank assuming little endian */
-extern struct s_cpu_regs {
+struct s_cpu_state {
 
     union { /* A and FL */
         addr_t PSW;
@@ -71,7 +71,9 @@ extern struct s_cpu_regs {
     data_t *irq_data;
     bool irq_ack;
 
-} cpu_state;
+};
+
+extern struct s_cpu_state cpu_state;
 
 /* One instruction */
 void cpu_step(void);
@@ -99,6 +101,19 @@ void cpu_step(void);
 #define cpu_cycles   cpu_state.cycles
 #define cpu_irq_data cpu_state.irq_data
 #define cpu_irq_ack  cpu_state.irq_ack
+
+
+/*
+    Defined by application
+*/
+
+/* Memory read/write */
+data_t cpu_load   (addr_t addr);
+void   cpu_store  (addr_t addr, data_t data);
+
+/* Port read/write */
+data_t cpu_input  (port_t port);
+void   cpu_output (port_t port, data_t data);
 
 
 #endif

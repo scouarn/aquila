@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "device.h"
-#include "emul/io.h"
+#include "emul/cpu.h"
 
 #define BAUD_PRESCALE(BAUD_RATE) ((F_CPU / (16UL*BAUD_RATE))-1)
 
@@ -276,7 +276,7 @@ ISR (INT4_vect) {
     CPU IO functions
 */
 
-data_t io_load(addr_t addr) {
+data_t cpu_load(addr_t addr) {
     if (addr >= RAM_SIZE) return 0x00;
 
     io_addr_bus = addr;
@@ -284,7 +284,7 @@ data_t io_load(addr_t addr) {
     return io_data_bus;
 }
 
-void io_store(addr_t addr, data_t data) {
+void cpu_store(addr_t addr, data_t data) {
     if (addr >= RAM_SIZE) return;
 
     io_addr_bus  = addr;
@@ -296,7 +296,7 @@ void io_store(addr_t addr, data_t data) {
     We receive from ONE of the two serial ports (USB/Minitel),
     But we send to BOTH serial ports.
 */
-data_t io_input(port_t port) {
+data_t cpu_input(port_t port) {
     io_addr_bus = (port << 8) | port; // According to datasheet
 
     switch (port) {
@@ -357,7 +357,7 @@ data_t io_input(port_t port) {
     return io_data_bus;
 }
 
-void io_output(port_t port, data_t data) {
+void cpu_output(port_t port, data_t data) {
     io_addr_bus = (port << 8) | port; // According to datasheet
     io_data_bus = data;
 
