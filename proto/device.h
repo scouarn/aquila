@@ -1,7 +1,7 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-#include "../emul/cpu.h"
+#include "emul/cpu.h"
 
 #define BAUD_USB 9600U
 #define BAUD_MINITEL 4800U

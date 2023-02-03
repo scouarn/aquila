@@ -35,4 +35,4 @@ $(MODULES) :
 
 # Cleaning
 clean :
-	rm -rf $(BIN)
+	rm -rf $(BUILD)

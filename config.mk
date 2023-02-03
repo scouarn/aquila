@@ -1,6 +1,6 @@
 ROOT = $(PWD)
-BIN  = $(ROOT)/bin
-OUT  = $(BIN)/$(CURMODULE)
+BUILD = $(ROOT)/build
+OUT = $(BUILD)/$(CURMODULE)
 
 # Options
 CC = gcc
@@ -9,8 +9,8 @@ LDFLAGS +=
 LDLIBS  +=
 
 # Additional options for debug/release
-CFLAGS += -O3
-#CFLAGS += -ggdb
+#CFLAGS += -O3
+CFLAGS += -ggdb
 
 # Build directories
 MKDIR := mkdir -p
